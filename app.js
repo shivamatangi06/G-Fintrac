@@ -16,6 +16,11 @@ const DEFAULT_STATE = {
     activeTab: 'dashboard'
 };
 
+// ===================== SUPABASE SETUP =====================
+const SUPA_URL = 'https://zgwazeqdlohgxseknzwz.supabase.co';
+const SUPA_ANON = 'eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJzdXBhYmFzZSIsInJlZiI6Inpnd2F6ZXFkbG9oZ3hzZWtuend6Iiwicm9sZSI6ImFub24iLCJpYXQiOjE3NzI1NDk5NDQsImV4cCI6MjA4ODEyNTk0NH0.KvkIsj0apW3MaJbBWJ94JvO6FBtKFbm5b-R_Y9aii9s';
+const supabase = window.supabase ? window.supabase.createClient(SUPA_URL, SUPA_ANON) : null;
+
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
@@ -44,6 +49,91 @@ function saveState(state) {
 }
 
 let APP = loadState();
+
+// ===================== CLOUD SYNC =====================
+
+async function fetchRemoteTransactions() {
+    if (!supabase) return;
+    try {
+        const { data, error } = await supabase
+            .from('transactions')
+            .select('*')
+            .order('date', { ascending: false });
+        if (error) throw error;
+
+        APP.transactions = data || [];
+        saveState(APP);
+    } catch (e) {
+        console.warn('Supabase fetch failed', e);
+    }
+}
+
+async function upsertTransactionRemote(txn) {
+    if (!supabase) return;
+    try {
+        const { error } = await supabase.from('transactions').upsert(txn);
+        if (error) throw error;
+    } catch (e) {
+        console.warn('Supabase upsert failed', e);
+        showToast('Saving to cloud failed (saved locally)');
+    }
+}
+
+async function upsertTransactionsRemote(txns) {
+    if (!supabase || !txns.length) return;
+    try {
+        const { error } = await supabase.from('transactions').upsert(txns);
+        if (error) throw error;
+    } catch (e) {
+        console.warn('Supabase bulk upsert failed', e);
+        showToast('Cloud sync unavailable (bulk save)');
+    }
+}
+
+async function deleteTransactionRemote(id) {
+    if (!supabase) return;
+    try {
+        const { error } = await supabase.from('transactions').delete().eq('id', id);
+        if (error) throw error;
+    } catch (e) {
+        console.warn('Supabase delete failed', e);
+        showToast('Cloud sync unavailable (delete)');
+    }
+}
+
+async function deleteMonthRemote(monthIndex, year) {
+    if (!supabase) return;
+    try {
+        const start = new Date(year, monthIndex, 1).toISOString().slice(0, 10);
+        const end = new Date(year, monthIndex + 1, 0).toISOString().slice(0, 10);
+        const { error } = await supabase
+            .from('transactions')
+            .delete()
+            .gte('date', start)
+            .lte('date', end);
+        if (error) throw error;
+    } catch (e) {
+        console.warn('Supabase month delete failed', e);
+        showToast('Cloud sync unavailable (month delete)');
+    }
+}
+
+function subscribeRealtime() {
+    if (!supabase) return;
+    supabase
+        .channel('transactions-listener')
+        .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, async () => {
+            // Re-fetch transactions primarily when changes occur from other devices
+            await fetchRemoteTransactions();
+            refreshDashboard();
+            refreshInsights();
+        })
+        .subscribe((status) => {
+            if (status === 'SUBSCRIBED') {
+                console.log('Realtime connected');
+            }
+        });
+}
 
 // ===================== DOM REFERENCES =====================
 
@@ -112,6 +202,7 @@ const cancelParsedBtn = $('#cancelParsedBtn');
 // Settings
 const themeToggle = $('#themeToggle');
 const exportCSVBtn = $('#exportCSV');
+const exportPDFBtn = $('#exportPDF');
 const clearDataBtn = $('#clearDataBtn');
 const confirmModal = $('#confirmModal');
 const confirmClearBtn = $('#confirmClearBtn');
@@ -131,13 +222,12 @@ const txnCategoryChips = $('#txnCategoryChips');
 
 // ===================== MONTH STATE =====================
 
-const now = new Date();
-let dashMonthIndex = now.getMonth();
-let dashYear = now.getFullYear();
-let dashShowAll = true;
+let dashMonthIndex = new Date().getMonth();
+let dashYear = new Date().getFullYear();
+let dashShowAll = false;
 
-let insightMonthIndex = now.getMonth();
-let insightYear = now.getFullYear();
+let insightMonthIndex = dashMonthIndex;
+let insightYear = dashYear;
 let insightShowAll = false;
 
 // ===================== NAVIGATION =====================
@@ -161,10 +251,7 @@ function isMobile() {
 }
 
 function toggleSidebar() {
-    const isMobileView = isMobile();
-    const toggler = isMobileView ? hamburgerBtn : sidebarToggleBtn;
-
-    if (isMobileView) {
+    if (isMobile()) {
         // Mobile: open/close slide
         const nowOpen = !sidebar.classList.contains('open');
         sidebar.classList.toggle('open', nowOpen);
@@ -294,22 +381,17 @@ function changeMonth(direction, context) {
     }
 }
 
-function toggleAllMonths(context) {
-    if (context === 'dash') {
-        dashShowAll = !dashShowAll;
-        dashAllMonths.classList.toggle('active', dashShowAll);
-        updateMonthLabel(dashMonthLabel, dashMonthIndex, dashYear, dashShowAll);
-        refreshDashboard();
-    } else {
-        // All-month toggle not available on insights
-        return;
-    }
+function toggleAllMonths() {
+    dashShowAll = !dashShowAll;
+    dashAllMonths.classList.toggle('active', dashShowAll);
+    updateMonthLabel(dashMonthLabel, dashMonthIndex, dashYear, dashShowAll);
+    refreshDashboard();
 }
 
 // Event listeners
 dashPrevMonth.addEventListener('click', () => changeMonth(-1, 'dash'));
 dashNextMonth.addEventListener('click', () => changeMonth(1, 'dash'));
-dashAllMonths.addEventListener('click', () => toggleAllMonths('dash'));
+dashAllMonths.addEventListener('click', toggleAllMonths);
 
 insightPrevMonth.addEventListener('click', () => changeMonth(-1, 'insight'));
 insightNextMonth.addEventListener('click', () => changeMonth(1, 'insight'));
@@ -340,15 +422,7 @@ function computeTotals(txns) {
         }
     });
 
-    return {
-        income,
-        expenses,
-        lent,
-        borrowed,
-        savings: income - expenses,
-        savingsContrib,
-        emergencyContrib
-    };
+    return { income, expenses, lent, borrowed, savingsContrib, emergencyContrib };
 }
 
 // ===================== PROGRESS RINGS =====================
@@ -554,9 +628,7 @@ renderCategoryChips(selectedType);
 
 // ===================== INSIGHTS =====================
 
-txnDateInput.valueAsDate = new Date();
-
-transactionForm.addEventListener('submit', (e) => {
+transactionForm.addEventListener('submit', async (e) => {
     e.preventDefault();
 
     let category = selectedCategory === 'custom'
@@ -574,6 +646,7 @@ transactionForm.addEventListener('submit', (e) => {
 
     APP.transactions.push(txn);
     saveState(APP);
+    await upsertTransactionRemote(txn);
 
     transactionForm.reset();
     txnDateInput.valueAsDate = new Date();
@@ -592,9 +665,10 @@ transactionForm.addEventListener('submit', (e) => {
     showToast('Transaction added!');
 });
 
-function deleteTxn(id) {
+async function deleteTxn(id) {
     APP.transactions = APP.transactions.filter(t => t.id !== id);
     saveState(APP);
+    await deleteTransactionRemote(id);
     refreshInsights();
     refreshDashboard();
     showToast('Transaction deleted');
@@ -664,26 +738,14 @@ function renderCategoryAnalytics(txns) {
 
 function refreshInsights() {
     const filtered = getFilteredTxns(insightMonthIndex, insightYear, insightShowAll);
+    const totals = computeTotals(filtered);
 
-    let inc = 0, exp = 0, savingsContrib = 0, emergencyContrib = 0, lent = 0, borrowed = 0;
-    filtered.forEach(t => {
-        const amt = parseFloat(t.amount) || 0;
-        if (t.type === 'income') inc += amt;
-        if (t.type === 'expense') exp += amt;
-        if (t.type === 'lent') lent += amt;
-        if (t.type === 'borrowed') borrowed += amt;
-        if (t.type === 'savings' || t.category === 'Savings Contribution') savingsContrib += amt;
-        if (t.type === 'emergency' || t.category === 'Emergency Contribution') emergencyContrib += amt;
-    });
-
-    insightsIncome.textContent = '₹' + inc.toLocaleString('en-IN');
-    insightsExpenses.textContent = '₹' + exp.toLocaleString('en-IN');
-    const savingsPct = inc > 0 ? Math.round((savingsContrib / inc) * 100) : 0;
-    const emergencyPct = inc > 0 ? Math.round((emergencyContrib / inc) * 100) : 0;
-    insightsSavingsPct.textContent = `${savingsPct}%`;
-    insightsEmergencyPct.textContent = `${emergencyPct}%`;
-    insightsLent.textContent = '₹' + lent.toLocaleString('en-IN');
-    insightsBorrowed.textContent = '₹' + borrowed.toLocaleString('en-IN');
+    insightsIncome.textContent = '₹' + totals.income.toLocaleString('en-IN');
+    insightsExpenses.textContent = '₹' + totals.expenses.toLocaleString('en-IN');
+    insightsSavingsPct.textContent = (totals.income > 0 ? Math.round((totals.savingsContrib / totals.income) * 100) : 0) + '%';
+    insightsEmergencyPct.textContent = (totals.income > 0 ? Math.round((totals.emergencyContrib / totals.income) * 100) : 0) + '%';
+    insightsLent.textContent = '₹' + totals.lent.toLocaleString('en-IN');
+    insightsBorrowed.textContent = '₹' + totals.borrowed.toLocaleString('en-IN');
 
     renderTransactions(filtered);
     renderCategoryAnalytics(filtered);
@@ -888,18 +950,20 @@ uploadArea.addEventListener('drop', (e) => {
     if (e.dataTransfer.files[0]) parseUploadedFile(e.dataTransfer.files[0]);
 });
 
-importParsedBtn.addEventListener('click', () => {
+importParsedBtn.addEventListener('click', async () => {
     const count = parsedTransactions.length;
-    parsedTransactions.forEach(t => {
-        APP.transactions.push({
-            id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-            amount: t.amount,
-            type: t.type,
-            category: t.category,
-            date: t.date,
-            notes: t.description || ''
-        });
-    });
+    const newTxns = parsedTransactions.map(t => ({
+        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+        amount: t.amount,
+        type: t.type,
+        category: t.category,
+        date: t.date,
+        notes: t.description || ''
+    }));
+
+    APP.transactions.push(...newTxns);
+    await upsertTransactionsRemote(newTxns);
+
     saveState(APP);
     parsedTransactions = [];
     uploadPreview.style.display = 'none';
@@ -925,6 +989,43 @@ exportCSVBtn.addEventListener('click', () => {
     );
     downloadFile([headers.join(','), ...rows].join('\n'), 'financeflow_export.csv', 'text/csv');
     showToast('CSV exported!');
+});
+
+exportPDFBtn.addEventListener('click', () => {
+    if (APP.transactions.length === 0) { showToast('No data to export'); return; }
+
+    // Check if jsPDF is available
+    if (!window.jspdf || !window.jspdf.jsPDF) {
+        showToast('PDF export library not ready');
+        return;
+    }
+
+    const { jsPDF } = window.jspdf;
+    const doc = new jsPDF();
+
+    doc.setFontSize(18);
+    doc.text('G-Finrac Transactions', 14, 22);
+
+    const headers = [['Date', 'Type', 'Category', 'Amount', 'Notes']];
+    const data = APP.transactions.map(t => [
+        new Date(t.date).toLocaleDateString('en-IN'),
+        t.type,
+        t.category,
+        `Rs. ${t.amount.toLocaleString('en-IN')}`,
+        t.notes || ''
+    ]);
+
+    doc.autoTable({
+        startY: 30,
+        head: headers,
+        body: data,
+        theme: 'grid',
+        styles: { fontSize: 10, cellPadding: 3 },
+        headStyles: { fillColor: [41, 128, 185], textColor: 255 }
+    });
+
+    doc.save('g_finrac_transactions.pdf');
+    showToast('PDF exported!');
 });
 
 function downloadFile(content, filename, mime) {
@@ -953,7 +1054,7 @@ function parseMonthInput(value) {
     return { monthIndex, year };
 }
 
-confirmClearBtn.addEventListener('click', () => {
+confirmClearBtn.addEventListener('click', async () => {
     const parsed = parseMonthInput(confirmMonthInput.value);
     if (!parsed) { showToast('Enter a valid month (e.g., Feb or Feb 2025)'); return; }
 
@@ -968,6 +1069,8 @@ confirmClearBtn.addEventListener('click', () => {
 
     const removed = before - APP.transactions.length;
     saveState(APP);
+    await deleteMonthRemote(parsed.monthIndex, parsed.year || new Date().getFullYear());
+
     confirmModal.classList.remove('show');
     refreshDashboard();
     refreshInsights();
@@ -983,7 +1086,7 @@ confirmModal.addEventListener('click', (e) => {
 
 // ===================== INITIALIZATION =====================
 
-function init() {
+async function init() {
     applyTheme(APP.theme || 'dark');
     txnDateInput.valueAsDate = new Date();
     setHamburgerActive(!sidebar.classList.contains('collapsed') && sidebar.classList.contains('open'));
@@ -996,6 +1099,9 @@ function init() {
     if (dashShowAll) {
         dashAllMonths.classList.add('active');
     }
+
+    await fetchRemoteTransactions();
+    subscribeRealtime();
 
     // Restore last active tab
     switchTab(APP.activeTab || 'dashboard');
