@@ -1186,13 +1186,20 @@ function getExportFilename(ext, monthInputVal) {
 
 if (changePinBtn) {
     changePinBtn.addEventListener('click', () => {
-        pinMode = 'setup';
-        pinSetupValue = '';
+        const pinTxn = APP.transactions.find(t => t.id === 'settings_pin');
+        if (pinTxn && pinTxn.notes) {
+            pinMode = 'verify_before_change';
+            pinSetupMsg.textContent = 'Enter current PIN to change';
+            document.querySelector('.pin-lock-subtitle').textContent = 'Security Verification';
+        } else {
+            pinMode = 'setup';
+            pinSetupValue = '';
+            pinSetupMsg.textContent = 'Create a new 4-digit PIN';
+            document.querySelector('.pin-lock-subtitle').textContent = 'Set up a new security PIN';
+        }
         pinEntry = '';
         updatePinDots();
         pinSetupSection.style.display = 'block';
-        pinSetupMsg.textContent = 'Create a new 4-digit PIN';
-        document.querySelector('.pin-lock-subtitle').textContent = 'Set up a new security PIN';
         pinLockScreen.style.display = 'flex';
     });
 }
@@ -1258,6 +1265,27 @@ function handlePinKey(key) {
 }
 
 function processPin() {
+    if (pinMode === 'verify_before_change') {
+        const pinTxn = APP.transactions.find(t => t.id === 'settings_pin');
+        const savedPin = pinTxn ? pinTxn.notes : null;
+        if (pinEntry === savedPin) {
+            pinMode = 'setup';
+            pinSetupValue = '';
+            pinEntry = '';
+            updatePinDots();
+            pinSetupMsg.textContent = 'Create a new 4-digit PIN';
+            document.querySelector('.pin-lock-subtitle').textContent = 'Set up a new security PIN';
+        } else {
+            pinError.textContent = 'Incorrect current PIN';
+            pinError.classList.add('shake');
+            pinEntry = '';
+            updatePinDots();
+            pinDots.classList.add('shake');
+            setTimeout(() => pinDots.classList.remove('shake'), 500);
+        }
+        return;
+    }
+
     if (pinMode === 'setup') {
         // First entry — store temporarily
         pinSetupValue = pinEntry;
