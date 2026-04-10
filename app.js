@@ -221,6 +221,7 @@ const themeToggle = $('#themeToggle');
 const exportCSVBtn = $('#exportCSV');
 const exportPDFBtn = $('#exportPDF');
 const clearDataBtn = $('#clearDataBtn');
+const changePinBtn = $('#changePinBtn');
 const confirmModal = $('#confirmModal');
 const confirmClearBtn = $('#confirmClearBtn');
 const cancelClearBtn = $('#cancelClearBtn');
@@ -1183,6 +1184,19 @@ function getExportFilename(ext, monthInputVal) {
     return `All_Transactions.${ext}`;
 }
 
+if (changePinBtn) {
+    changePinBtn.addEventListener('click', () => {
+        pinMode = 'setup';
+        pinSetupValue = '';
+        pinEntry = '';
+        updatePinDots();
+        pinSetupSection.style.display = 'block';
+        pinSetupMsg.textContent = 'Create a new 4-digit PIN';
+        document.querySelector('.pin-lock-subtitle').textContent = 'Set up a new security PIN';
+        pinLockScreen.style.display = 'flex';
+    });
+}
+
 // ===================== PIN LOCK SYSTEM =====================
 
 const pinLockScreen = document.getElementById('pinLockScreen');
@@ -1196,8 +1210,11 @@ let pinEntry = '';
 let pinMode = 'unlock'; // 'unlock', 'setup', 'confirm'
 let pinSetupValue = '';
 
-function initPinSystem() {
-    const savedPin = localStorage.getItem('financeflow_pin');
+async function initPinSystem() {
+    await fetchRemoteTransactions();
+    const pinTxn = APP.transactions.find(t => t.id === 'settings_pin');
+    const savedPin = pinTxn ? pinTxn.notes : null;
+
     if (!savedPin) {
         // First time — setup mode
         pinMode = 'setup';
@@ -1207,6 +1224,7 @@ function initPinSystem() {
     } else {
         pinMode = 'unlock';
         pinSetupSection.style.display = 'none';
+        document.querySelector('.pin-lock-subtitle').textContent = 'Enter your 4-digit PIN to continue';
     }
     pinLockScreen.style.display = 'flex';
     pinEntry = '';
@@ -1254,7 +1272,19 @@ function processPin() {
     if (pinMode === 'confirm') {
         if (pinEntry === pinSetupValue) {
             // PIN confirmed — save it
-            localStorage.setItem('financeflow_pin', pinEntry);
+            const pinTxn = {
+                id: 'settings_pin',
+                amount: 0,
+                type: 'settings',
+                category: 'System',
+                date: new Date().toISOString(),
+                notes: pinEntry
+            };
+            APP.transactions = APP.transactions.filter(t => t.id !== 'settings_pin');
+            APP.transactions.push(pinTxn);
+            saveState(APP);
+            upsertTransactionRemote(pinTxn);
+            
             pinLockScreen.style.display = 'none';
             showToast('PIN created successfully!');
             initApp();
@@ -1272,7 +1302,8 @@ function processPin() {
     }
 
     if (pinMode === 'unlock') {
-        const savedPin = localStorage.getItem('financeflow_pin');
+        const pinTxn = APP.transactions.find(t => t.id === 'settings_pin');
+        const savedPin = pinTxn ? pinTxn.notes : null;
         if (pinEntry === savedPin) {
             pinLockScreen.style.display = 'none';
             initApp();
