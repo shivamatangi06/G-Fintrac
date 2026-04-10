@@ -1264,7 +1264,7 @@ function handlePinKey(key) {
     }
 }
 
-function processPin() {
+async function processPin() {
     if (pinMode === 'verify_before_change') {
         const pinTxn = APP.transactions.find(t => t.id === 'settings_pin');
         const savedPin = pinTxn ? pinTxn.notes : null;
@@ -1311,7 +1311,9 @@ function processPin() {
             APP.transactions = APP.transactions.filter(t => t.id !== 'settings_pin');
             APP.transactions.push(pinTxn);
             saveState(APP);
-            upsertTransactionRemote(pinTxn);
+            
+            // Wait for it to correctly save in DB before continuing, otherwise we get a local override
+            await upsertTransactionRemote(pinTxn);
             
             pinLockScreen.style.display = 'none';
             showToast('PIN created successfully!');
