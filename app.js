@@ -26,6 +26,16 @@ const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
 
+function generateUUID() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
+
 // ===================== DATA LAYER =====================
 
 function loadState() {
@@ -660,7 +670,7 @@ transactionForm.addEventListener('submit', (e) => {
         : selectedCategory;
 
     const txn = {
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+        id: generateUUID(),
         amount: parseFloat(txnAmountInput.value),
         type: selectedType,
         category,
@@ -1003,7 +1013,7 @@ uploadArea.addEventListener('drop', (e) => {
 importParsedBtn.addEventListener('click', async () => {
     const count = parsedTransactions.length;
     const newTxns = parsedTransactions.map(t => ({
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+        id: generateUUID(),
         amount: t.amount,
         type: t.type,
         category: t.category,
