@@ -1184,25 +1184,7 @@ function getExportFilename(ext, monthInputVal) {
     return `All_Transactions.${ext}`;
 }
 
-if (changePinBtn) {
-    changePinBtn.addEventListener('click', () => {
-        const pinTxn = APP.transactions.find(t => t.id === 'settings_pin');
-        if (pinTxn && pinTxn.notes) {
-            pinMode = 'verify_before_change';
-            pinSetupMsg.textContent = 'Enter current PIN to change';
-            document.querySelector('.pin-lock-subtitle').textContent = 'Security Verification';
-        } else {
-            pinMode = 'setup';
-            pinSetupValue = '';
-            pinSetupMsg.textContent = 'Create a new 4-digit PIN';
-            document.querySelector('.pin-lock-subtitle').textContent = 'Set up a new security PIN';
-        }
-        pinEntry = '';
-        updatePinDots();
-        pinSetupSection.style.display = 'block';
-        pinLockScreen.style.display = 'flex';
-    });
-}
+
 
 // ===================== PIN LOCK SYSTEM =====================
 
@@ -1218,21 +1200,9 @@ let pinMode = 'unlock'; // 'unlock', 'setup', 'confirm'
 let pinSetupValue = '';
 
 async function initPinSystem() {
-    await fetchRemoteTransactions();
-    const pinTxn = APP.transactions.find(t => t.id === 'settings_pin');
-    const savedPin = pinTxn ? pinTxn.notes : null;
-
-    if (!savedPin) {
-        // First time — setup mode
-        pinMode = 'setup';
-        pinSetupSection.style.display = 'block';
-        pinSetupMsg.textContent = 'Create a new 4-digit PIN';
-        document.querySelector('.pin-lock-subtitle').textContent = 'Set up your security PIN';
-    } else {
-        pinMode = 'unlock';
-        pinSetupSection.style.display = 'none';
-        document.querySelector('.pin-lock-subtitle').textContent = 'Enter your 4-digit PIN to continue';
-    }
+    pinMode = 'unlock';
+    pinSetupSection.style.display = 'none';
+    document.querySelector('.pin-lock-subtitle').textContent = 'Enter your 4-digit PIN to continue';
     pinLockScreen.style.display = 'flex';
     pinEntry = '';
     updatePinDots();
@@ -1264,75 +1234,10 @@ function handlePinKey(key) {
     }
 }
 
-function processPin() {
-    if (pinMode === 'verify_before_change') {
-        const pinTxn = APP.transactions.find(t => t.id === 'settings_pin');
-        const savedPin = pinTxn ? pinTxn.notes : null;
-        if (pinEntry === savedPin) {
-            pinMode = 'setup';
-            pinSetupValue = '';
-            pinEntry = '';
-            updatePinDots();
-            pinSetupMsg.textContent = 'Create a new 4-digit PIN';
-            document.querySelector('.pin-lock-subtitle').textContent = 'Set up a new security PIN';
-        } else {
-            pinError.textContent = 'Incorrect current PIN';
-            pinError.classList.add('shake');
-            pinEntry = '';
-            updatePinDots();
-            pinDots.classList.add('shake');
-            setTimeout(() => pinDots.classList.remove('shake'), 500);
-        }
-        return;
-    }
-
-    if (pinMode === 'setup') {
-        // First entry — store temporarily
-        pinSetupValue = pinEntry;
-        pinMode = 'confirm';
-        pinEntry = '';
-        updatePinDots();
-        pinSetupMsg.textContent = 'Confirm your PIN';
-        document.querySelector('.pin-lock-subtitle').textContent = 'Re-enter your 4-digit PIN';
-        return;
-    }
-
-    if (pinMode === 'confirm') {
-        if (pinEntry === pinSetupValue) {
-            // PIN confirmed — save it
-            const pinTxn = {
-                id: 'settings_pin',
-                amount: 0,
-                type: 'settings',
-                category: 'System',
-                date: new Date().toISOString(),
-                notes: pinEntry
-            };
-            APP.transactions = APP.transactions.filter(t => t.id !== 'settings_pin');
-            APP.transactions.push(pinTxn);
-            saveState(APP);
-            upsertTransactionRemote(pinTxn);
-            
-            pinLockScreen.style.display = 'none';
-            showToast('PIN created successfully!');
-            initApp();
-        } else {
-            pinError.textContent = 'PINs do not match. Try again.';
-            pinError.classList.add('shake');
-            pinMode = 'setup';
-            pinSetupValue = '';
-            pinEntry = '';
-            updatePinDots();
-            pinSetupMsg.textContent = 'Create a new 4-digit PIN';
-            document.querySelector('.pin-lock-subtitle').textContent = 'Set up your security PIN';
-        }
-        return;
-    }
-
+async function processPin() {
     if (pinMode === 'unlock') {
-        const pinTxn = APP.transactions.find(t => t.id === 'settings_pin');
-        const savedPin = pinTxn ? pinTxn.notes : null;
-        if (pinEntry === savedPin) {
+        const hardcodedPin = '5432';
+        if (pinEntry === hardcodedPin) {
             pinLockScreen.style.display = 'none';
             initApp();
         } else {
