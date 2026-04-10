@@ -36,6 +36,42 @@
 
 <body>
 
+    <!-- ======================== PIN LOCK SCREEN ======================== -->
+    <div class="pin-lock-screen" id="pinLockScreen">
+        <div class="pin-lock-card">
+            <div class="pin-lock-icon">
+                <i class="fas fa-lock"></i>
+            </div>
+            <h2>G-Finrac</h2>
+            <p class="pin-lock-subtitle">Enter your 4-digit PIN to continue</p>
+            <div class="pin-dots" id="pinDots">
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+                <span class="pin-dot"></span>
+            </div>
+            <p class="pin-error" id="pinError"></p>
+            <div class="pin-keypad" id="pinKeypad">
+                <button class="pin-key" data-key="1">1</button>
+                <button class="pin-key" data-key="2">2</button>
+                <button class="pin-key" data-key="3">3</button>
+                <button class="pin-key" data-key="4">4</button>
+                <button class="pin-key" data-key="5">5</button>
+                <button class="pin-key" data-key="6">6</button>
+                <button class="pin-key" data-key="7">7</button>
+                <button class="pin-key" data-key="8">8</button>
+                <button class="pin-key" data-key="9">9</button>
+                <button class="pin-key pin-key-empty"></button>
+                <button class="pin-key" data-key="0">0</button>
+                <button class="pin-key pin-key-delete" data-key="delete"><i class="fas fa-backspace"></i></button>
+            </div>
+            <div class="pin-setup-section" id="pinSetupSection" style="display:none;">
+                <p class="pin-setup-msg" id="pinSetupMsg">Create a new 4-digit PIN</p>
+            </div>
+        </div>
+    </div>
+
+
     <!-- ======================== SIDEBAR ======================== -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
@@ -63,7 +99,11 @@
         </nav>
 
         <div class="sidebar-footer">
-            <div class="sidebar-footer-text">
+            <div class="sidebar-footer-text" id="syncStatus" title="Cloud sync status">
+                <i class="fas fa-circle-notch fa-spin" style="color: var(--text-muted); font-size:0.8rem;"></i>
+                <span>Connecting...</span>
+            </div>
+            <div class="sidebar-footer-text" style="margin-top: 6px;">
                 <i class="fas fa-code"></i>
                 <span>v2.0.0</span>
             </div>
@@ -455,10 +495,26 @@
                             <button class="btn btn-secondary btn-sm" id="exportCSV">
                                 <i class="fas fa-file-csv"></i> CSV
                             </button>
-                            <button class="btn btn-secondary btn-sm" id="exportPDF" style="margin-left: 0.5rem;">
+                            <button class="btn btn-secondary btn-sm" id="exportPDF">
                                 <i class="fas fa-file-pdf"></i> PDF
                             </button>
                         </div>
+                    </div>
+                </div>
+
+                <!-- Change PIN -->
+                <div class="card settings-card">
+                    <div class="settings-item">
+                        <div class="settings-info">
+                            <i class="fas fa-key"></i>
+                            <div>
+                                <h4>Change PIN</h4>
+                                <p>Update your 4-digit security PIN</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" id="changePinBtn">
+                            <i class="fas fa-edit"></i> Change
+                        </button>
                     </div>
                 </div>
 
@@ -488,6 +544,22 @@
 
     <!-- ======================== MODALS ======================== -->
 
+    <!-- Export Modal -->
+    <div class="modal-overlay" id="exportModal">
+        <div class="modal card">
+            <div class="modal-icon export">
+                <i class="fas fa-download"></i>
+            </div>
+            <h3>Export Data</h3>
+            <p>Enter month and year to export that period, or leave blank to export all data.</p>
+            <input type="text" id="exportMonthInput" class="input" placeholder="e.g. APR 2026 or Apr 2026">
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="confirmExportBtn"><i class="fas fa-download"></i> Export</button>
+                <button class="btn btn-secondary" id="cancelExportBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Confirm Clear Modal -->
     <div class="modal-overlay" id="confirmModal">
         <div class="modal card">
@@ -495,12 +567,26 @@
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
             <h3>Delete Month Data</h3>
-            <p>Type the month name (e.g., <strong>Month</strong>) to delete only that month's
-                transactions.</p>
-            <input type="text" id="confirmMonthInput" class="input" placeholder="e.g., Jan or Jan 2026">
+            <p>Enter the month and year to delete only that month's transactions.</p>
+            <input type="text" id="confirmMonthInput" class="input" placeholder="e.g. APR 2026 or Apr 2026">
             <div class="modal-actions">
-                <button class="btn btn-danger" id="confirmClearBtn">Delete Month</button>
+                <button class="btn btn-danger" id="confirmClearBtn"><i class="fas fa-trash-alt"></i> Delete Month</button>
                 <button class="btn btn-secondary" id="cancelClearBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- Delete Transaction Confirmation Modal -->
+    <div class="modal-overlay" id="deleteTxnModal">
+        <div class="modal card">
+            <div class="modal-icon danger">
+                <i class="fas fa-trash-alt"></i>
+            </div>
+            <h3>Delete Transaction</h3>
+            <p>Are you sure you want to delete this transaction? This action cannot be undone.</p>
+            <div class="modal-actions">
+                <button class="btn btn-danger" id="confirmDeleteTxnBtn"><i class="fas fa-trash-alt"></i> Delete</button>
+                <button class="btn btn-secondary" id="cancelDeleteTxnBtn">Cancel</button>
             </div>
         </div>
     </div>
