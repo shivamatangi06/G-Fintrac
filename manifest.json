@@ -1,0 +1,17 @@
+{
+  "name": "G-Fintrac Finance Tracker",
+  "short_name": "G-Fintrac",
+  "description": "Premium Personal Finance Tracker with local storage.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0f172a",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "https://cdn-icons-png.flaticon.com/512/2830/2830284.png",
+      "sizes": "512x512",
+      "type": "image/png",
+      "purpose": "any maskable"
+    }
+  ]
+}
