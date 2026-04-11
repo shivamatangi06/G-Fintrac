@@ -838,6 +838,10 @@ body.sidebar-collapsed .main-content {
     background: var(--borrowed-color);
 }
 
+.card-balance::before {
+    background: linear-gradient(180deg, #34d399, #7c3aed);
+}
+
 .card-icon {
     width: 46px;
     height: 46px;
@@ -867,6 +871,11 @@ body.sidebar-collapsed .main-content {
 .card-borrowed .card-icon {
     background: var(--borrowed-bg);
     color: var(--borrowed-color);
+}
+
+.card-balance .card-icon {
+    background: rgba(52, 211, 153, 0.12);
+    color: #34d399;
 }
 
 .card-info {
@@ -1852,7 +1861,7 @@ input[type="date"] {
 /* ---------- Large desktop (≤ 1200px) ---------- */
 @media (max-width: 1200px) {
     .summary-cards {
-        grid-template-columns: repeat(2, 1fr);
+        grid-template-columns: repeat(3, 1fr);
     }
 }
 
