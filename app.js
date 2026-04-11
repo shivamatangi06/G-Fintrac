@@ -944,6 +944,9 @@ function initPinSystem() {
     if (pinSetupSection) pinSetupSection.style.display = 'none';
     pinLockScreen.style.display = 'flex';
     pinEntry = '';
+    if (pinError) { pinError.textContent = ''; pinError.classList.remove('shake'); }
+    const subtitle = document.querySelector('.pin-lock-subtitle');
+    if (subtitle) subtitle.textContent = 'Enter your 4-digit PIN to continue';
     updatePinDots();
 }
 
@@ -963,8 +966,15 @@ function handlePinKey(key) {
     if (pinEntry.length === 4) {
         setTimeout(() => {
             if (pinEntry === '5432') {
-                pinLockScreen.style.display = 'none';
-                initApp();
+                // Check if we're in net-balance-reveal mode
+                if (netBalanceUnlockMode) {
+                    netBalanceUnlockMode = false;
+                    revealNetBalance();
+                    pinLockScreen.style.display = 'none';
+                } else {
+                    pinLockScreen.style.display = 'none';
+                    initApp();
+                }
             } else {
                 if (pinError) {
                     pinError.textContent = 'Incorrect PIN';
@@ -991,6 +1001,65 @@ document.addEventListener('keydown', (e) => {
     }
 });
 
+// ===================== NET BALANCE REVEAL =====================
+
+let netBalanceUnlockMode = false;
+let netBalanceRevealed = false;
+
+function revealNetBalance() {
+    const el = document.getElementById('totalNetBalance');
+    const btn = document.getElementById('netBalanceUnlockBtn');
+    const icon = document.getElementById('netBalanceEyeIcon');
+    const card = document.getElementById('netBalanceCard');
+
+    if (el) el.classList.remove('net-balance-blurred');
+    if (icon) icon.className = 'fas fa-eye';
+    if (btn) btn.innerHTML = '<i class="fas fa-eye" id="netBalanceEyeIcon"></i> Visible';
+
+    // Update card border color based on value
+    const raw = el ? el.textContent.replace(/[₹,\-]/g, '').trim() : '0';
+    const val = parseFloat(raw) || 0;
+    if (card) {
+        card.style.borderLeftColor = val >= 0 ? 'var(--income-color)' : 'var(--expense-color)';
+    }
+
+    netBalanceRevealed = true;
+}
+
+function hideNetBalance() {
+    const el = document.getElementById('totalNetBalance');
+    const btn = document.getElementById('netBalanceUnlockBtn');
+    if (el) el.classList.add('net-balance-blurred');
+    if (btn) btn.innerHTML = '<i class="fas fa-eye-slash" id="netBalanceEyeIcon"></i> Tap to reveal';
+    netBalanceRevealed = false;
+}
+
+const netBalanceUnlockBtn = document.getElementById('netBalanceUnlockBtn');
+if (netBalanceUnlockBtn) {
+    netBalanceUnlockBtn.addEventListener('click', () => {
+        if (netBalanceRevealed) {
+            hideNetBalance();
+        } else {
+            // Show PIN screen to verify identity
+            netBalanceUnlockMode = true;
+            pinEntry = '';
+            updatePinDots();
+            if (pinError) pinError.textContent = 'Enter PIN to reveal Net Balance';
+            pinLockScreen.style.display = 'flex';
+        }
+    });
+}
+
+// Auto-uppercase confirmMonthInput as user types
+const confirmMonthInputEl = document.getElementById('confirmMonthInput');
+if (confirmMonthInputEl) {
+    confirmMonthInputEl.addEventListener('input', function() {
+        const pos = this.selectionStart;
+        this.value = this.value.toUpperCase();
+        this.setSelectionRange(pos, pos);
+    });
+}
+
 // ===================== INITIALIZATION =====================
 
 async function initApp() {
@@ -999,6 +1068,8 @@ async function initApp() {
     updateMonthLabel(dashMonthLabel, dashMonthIndex, dashYear, dashShowAll);
     updateMonthLabel(insightMonthLabel, insightMonthIndex, insightYear, insightShowAll);
     switchTab(APP.activeTab || 'dashboard');
+    refreshDashboard();
+    refreshInsights();
 }
 
 initPinSystem();
