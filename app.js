@@ -394,8 +394,6 @@ function setRingProgress(ringEl, pctEl, currentEl, targetEl, current, target) {
     const offset = RING_CIRCUMFERENCE - (Math.max(pct, 0) / 100) * RING_CIRCUMFERENCE;
     if (ringEl) ringEl.style.strokeDashoffset = offset;
     if (pctEl) pctEl.textContent = Math.max(pct, 0) + '%';
-    if (currentEl) currentEl.textContent = '₹' + Math.max(current, 0).toLocaleString('en-IN');
-    if (targetEl) targetEl.textContent = '₹' + Math.max(target, 0).toLocaleString('en-IN');
 }
 
 // ===================== DASHBOARD =====================
@@ -421,7 +419,7 @@ function refreshDashboard() {
 
     if (totalNetBalanceEl) {
         const netBal = monthTotals.income - monthTotals.expenses
-            - monthTotals.emergencyContrib - monthTotals.lent;
+            - monthTotals.emergencyContrib - monthTotals.savingsContrib - monthTotals.lent;
         totalNetBalanceEl.classList.remove('income-color', 'expense-color');
         totalNetBalanceEl.classList.add(netBal >= 0 ? 'income-color' : 'expense-color');
         animateSignedCounter(totalNetBalanceEl, netBal);
@@ -883,22 +881,52 @@ cancelExportBtn.addEventListener('click', () => exportModal.classList.remove('sh
 
 clearDataBtn.addEventListener('click', () => confirmModal.classList.add('show'));
 confirmClearBtn.addEventListener('click', () => {
-    const val = confirmMonthInput.value.trim();
-    if (!val) {
+    const code = confirmMonthInput.value.trim().toUpperCase();
+    if (!code) {
+        showToast('Enter code to delete (e.g., APRDEL2026)');
+        return;
+    }
+
+    if (code === 'CLEARALLDATANOW') {
         APP.transactions = [];
         saveState(APP);
         showToast('All data cleared');
     } else {
-        APP.transactions = APP.transactions.filter(t => {
+        // Format: [MONTH_3_CHARS]DEL[YEAR_4_CHARS]
+        const match = code.match(/^([A-Z]{3})DEL(\d{4})$/);
+        if (!match) {
+            showToast('Invalid format. Use example: MARDEL2026');
+            return;
+        }
+
+        const monthStr = match[1];
+        const year = parseInt(match[2]);
+        const monthIndex = MONTH_SHORT.findIndex(m => m.toUpperCase() === monthStr);
+
+        if (monthIndex === -1) {
+            showToast('Invalid month abbreviation');
+            return;
+        }
+
+        const filtered = APP.transactions.filter(t => {
             const d = new Date(t.date);
-            const m = d.toLocaleString('default', { month: 'long' });
-            return m.toLowerCase() !== val.toLowerCase();
+            return d.getMonth() !== monthIndex || d.getFullYear() !== year;
         });
+
+        if (filtered.length === APP.transactions.length) {
+            showToast(`No data found for ${monthStr} ${year}`);
+            return;
+        }
+
+        APP.transactions = filtered;
         saveState(APP);
-        showToast(`Cleared ${val}`);
+        showToast(`Cleared ${monthStr} ${year}`);
     }
+
     confirmModal.classList.remove('show');
-    refreshDashboard(); refreshInsights();
+    confirmMonthInput.value = '';
+    refreshDashboard();
+    refreshInsights();
 });
 cancelClearBtn.addEventListener('click', () => confirmModal.classList.remove('show'));
 
