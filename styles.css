@@ -2454,27 +2454,25 @@ svg {
     max-width: 100%;
 }
 
-/* ======================== FILTER BAR & MONTH SWITCHER ======================== */
+/* ======================== FILTER BAR — single row ======================== */
 .filter-bar {
     display: flex;
-    justify-content: space-between;
     align-items: center;
+    gap: 10px;
     margin-bottom: 24px;
-    gap: 16px;
-    flex-wrap: wrap;
+    flex-wrap: nowrap;          /* NEVER wrap — keep 1 line */
+    overflow-x: auto;           /* allow scroll on tiny screens */
+    padding-bottom: 4px;        /* room for scrollbar */
+    -webkit-overflow-scrolling: touch;
+    scrollbar-width: none;
 }
+.filter-bar::-webkit-scrollbar { display: none; }
 
-.month-switcher-group {
-    display: flex;
-    align-items: center;
-    gap: 12px;
-    flex-wrap: wrap;
-}
-
+/* Month < label > pills */
 .month-switcher {
     display: flex;
     align-items: center;
-    gap: 0;
+    flex-shrink: 0;
     background: var(--card-bg);
     border: 1px solid var(--border-color);
     border-radius: 12px;
@@ -2483,12 +2481,12 @@ svg {
 }
 
 .month-label {
-    font-size: 0.95rem;
-    font-weight: 600;
+    font-size: 0.9rem;
+    font-weight: 700;
     color: var(--text-primary);
-    padding: 0 14px;
+    padding: 0 12px;
     white-space: nowrap;
-    min-width: 130px;
+    min-width: 110px;
     text-align: center;
 }
 
@@ -2497,26 +2495,28 @@ svg {
     border: none;
     color: var(--text-secondary);
     cursor: pointer;
-    padding: 10px 14px;
-    font-size: 0.9rem;
+    padding: 9px 12px;
+    font-size: 0.85rem;
     transition: background 0.2s, color 0.2s;
     display: flex;
     align-items: center;
     justify-content: center;
+    flex-shrink: 0;
 }
-
 .btn-icon:hover {
-    background: var(--accent-glow);
+    background: rgba(124,58,237,0.15);
     color: var(--accent-light);
 }
 
+/* All Months button */
 .btn-all-months {
+    flex-shrink: 0;
     background: var(--card-bg);
     border: 1px solid var(--border-color);
     color: var(--text-secondary);
-    font-size: 0.85rem;
+    font-size: 0.82rem;
     font-weight: 600;
-    padding: 9px 16px;
+    padding: 8px 14px;
     border-radius: 10px;
     cursor: pointer;
     transition: all 0.2s;
@@ -2524,47 +2524,50 @@ svg {
     font-family: var(--font);
     white-space: nowrap;
 }
-
 .btn-all-months:hover,
 .btn-all-months.active {
     background: var(--accent);
     color: #fff;
     border-color: var(--accent);
-    box-shadow: 0 4px 16px var(--accent-glow);
+    box-shadow: 0 4px 14px var(--accent-glow);
 }
 
-/* ======================== TOP NET BALANCE CARD ======================== */
-.top-balance-card {
-    background: var(--card-bg);
-    backdrop-filter: blur(12px);
-    border: 1px solid var(--border-color);
-    padding: 12px 20px;
-    border-radius: 16px;
+/* ======================== NET BALANCE INLINE PILL ======================== */
+.net-balance-inline {
+    flex-shrink: 0;
+    margin-left: auto;          /* push to far right */
     display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    min-width: 160px;
-    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
-    border-left: 4px solid var(--income-color);
-    gap: 4px;
+    align-items: center;
+    gap: 8px;
+    background: linear-gradient(135deg, rgba(52,211,153,0.12), rgba(124,58,237,0.12));
+    border: 1px solid rgba(52,211,153,0.3);
+    border-radius: 24px;
+    padding: 7px 14px 7px 12px;
+    white-space: nowrap;
 }
 
-.top-balance-label {
-    font-size: 0.72rem;
-    color: var(--text-muted);
+.net-balance-inline-label {
+    font-size: 0.78rem;
+    font-weight: 600;
+    color: #34d399;
     text-transform: uppercase;
-    letter-spacing: 1px;
+    letter-spacing: 0.5px;
+    display: flex;
+    align-items: center;
+    gap: 5px;
 }
 
-.top-balance-value {
-    font-size: 1.4rem;
+.net-balance-inline-value {
+    font-size: 1rem;
     font-weight: 700;
     letter-spacing: -0.5px;
     transition: filter 0.3s ease;
+    color: var(--text-primary);
 }
 
+/* Blur / reveal */
 .net-balance-blurred {
-    filter: blur(8px);
+    filter: blur(7px);
     user-select: none;
     pointer-events: none;
 }
@@ -2572,32 +2575,22 @@ svg {
 .net-balance-unlock-btn {
     background: none;
     border: none;
-    font-size: 0.72rem;
-    color: var(--text-muted);
+    color: rgba(52,211,153,0.6);
     cursor: pointer;
-    padding: 2px 0;
-    font-family: var(--font);
+    padding: 2px 4px;
+    font-size: 0.9rem;
     display: flex;
     align-items: center;
-    gap: 5px;
-    transition: color 0.2s;
-    white-space: nowrap;
+    transition: color 0.2s, transform 0.2s;
 }
-
 .net-balance-unlock-btn:hover {
-    color: var(--accent-light);
+    color: #34d399;
+    transform: scale(1.2);
 }
 
-/* Mobile: stack filter-bar */
-@media (max-width: 600px) {
-    .filter-bar {
-        flex-direction: column;
-        align-items: stretch;
-    }
-    .top-balance-card {
-        align-items: center;
-    }
-    .month-switcher-group {
-        justify-content: center;
-    }
+/* ======================== RESPONSIVE ======================== */
+@media (max-width: 480px) {
+    .month-label { min-width: 90px; font-size: 0.82rem; }
+    .net-balance-inline-label i { display: none; } /* hide icon on tiny screens */
 }
+
