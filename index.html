@@ -42,7 +42,7 @@
             <div class="pin-lock-icon">
                 <i class="fas fa-lock"></i>
             </div>
-            <h2>G-Finrac</h2>
+            <h2>G-Fintrac</h2>
             <p class="pin-lock-subtitle">Enter your 4-digit PIN to continue</p>
             <div class="pin-dots" id="pinDots">
                 <span class="pin-dot"></span>
@@ -75,7 +75,7 @@
     <!-- ======================== SIDEBAR ======================== -->
     <aside class="sidebar" id="sidebar">
         <div class="sidebar-brand">
-            <span class="brand-text">G-Finrac</span>
+            <span class="brand-text">G-Fintrac</span>
             <button class="hamburger" id="sidebarToggleBtn" aria-label="Collapse sidebar">
                 <span></span>
                 <span></span>
@@ -121,7 +121,7 @@
             <span></span>
         </button>
         <div class="topbar-brand">
-            <span>G-Finrac</span>
+            <span>G-Fintrac</span>
         </div>
     </header>
 
@@ -192,6 +192,13 @@
                     <div class="card-info">
                         <span class="card-label">Borrowed Amount</span>
                         <span class="card-value" id="totalBorrowed">₹0</span>
+                    </div>
+                </div>
+                <div class="card summary-card card-balance">
+                    <div class="card-icon"><i class="fas fa-scale-balanced"></i></div>
+                    <div class="card-info">
+                        <span class="card-label">Net Balance</span>
+                        <span class="card-value" id="totalNetBalance">₹0</span>
                     </div>
                 </div>
             </div>
@@ -283,6 +290,7 @@
                 <button class="month-arrow" id="insightNextMonth" aria-label="Next month">
                     <i class="fas fa-chevron-right"></i>
                 </button>
+                <button class="all-months-btn" id="insightAllMonths">All Months</button>
             </div>
 
             <!-- Month Summary Cards -->
@@ -502,21 +510,7 @@
                     </div>
                 </div>
 
-                <!-- Change PIN -->
-                <div class="card settings-card">
-                    <div class="settings-item">
-                        <div class="settings-info">
-                            <i class="fas fa-key"></i>
-                            <div>
-                                <h4>Change PIN</h4>
-                                <p>Update your 4-digit security PIN</p>
-                            </div>
-                        </div>
-                        <button class="btn btn-secondary btn-sm" id="changePinBtn">
-                            <i class="fas fa-edit"></i> Change
-                        </button>
-                    </div>
-                </div>
+
 
                 <!-- Clear Data -->
                 <div class="card settings-card">
@@ -530,6 +524,22 @@
                         </div>
                         <button class="btn btn-danger btn-sm" id="clearDataBtn">
                             <i class="fas fa-exclamation-triangle"></i> Clear
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Cloud Sync -->
+                <div class="card settings-card">
+                    <div class="settings-item">
+                        <div class="settings-info">
+                            <i class="fas fa-sync-alt"></i>
+                            <div>
+                                <h4>Cloud Sync</h4>
+                                <p id="lastSyncTime">Connecting...</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" id="syncNowBtn">
+                            <i class="fas fa-sync"></i> Sync Now
                         </button>
                     </div>
                 </div>
@@ -552,7 +562,7 @@
             </div>
             <h3>Export Data</h3>
             <p>Enter month and year to export that period, or leave blank to export all data.</p>
-            <input type="text" id="exportMonthInput" class="input">
+            <input type="text" id="exportMonthInput" class="input" placeholder="e.g. March 2026">
             <div class="modal-actions">
                 <button class="btn btn-primary" id="confirmExportBtn"><i class="fas fa-download"></i> Export</button>
                 <button class="btn btn-secondary" id="cancelExportBtn">Cancel</button>
@@ -568,7 +578,7 @@
             </div>
             <h3>Delete Month Data</h3>
             <p>Enter the month and year to delete only that month's transactions.</p>
-            <input type="text" id="confirmMonthInput" class="input">
+            <input type="text" id="confirmMonthInput" class="input" placeholder="e.g. March 2026">
             <div class="modal-actions">
                 <button class="btn btn-danger" id="confirmClearBtn"><i class="fas fa-trash-alt"></i> Delete Month</button>
                 <button class="btn btn-secondary" id="cancelClearBtn">Cancel</button>
