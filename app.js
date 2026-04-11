@@ -13,8 +13,7 @@ const EMERGENCY_TARGET = 200000;
 const DEFAULT_STATE = {
     transactions: [],
     theme: 'dark',
-    activeTab: 'dashboard',
-    pin: null
+    activeTab: 'dashboard'
 };
 
 // ===================== SUPABASE SETUP =====================
@@ -25,6 +24,16 @@ const supabase = window.supabase ? window.supabase.createClient(SUPA_URL, SUPA_A
 const MONTH_NAMES = ['January', 'February', 'March', 'April', 'May', 'June',
     'July', 'August', 'September', 'October', 'November', 'December'];
 const MONTH_SHORT = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'];
+
+function generateUUID() {
+    if (typeof crypto !== 'undefined' && crypto.randomUUID) {
+        return crypto.randomUUID();
+    }
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+        var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
+        return v.toString(16);
+    });
+}
 
 // ===================== DATA LAYER =====================
 
@@ -50,6 +59,7 @@ function saveState(state) {
 }
 
 let APP = loadState();
+let lastSyncedAt = null; // tracks last successful remote sync
 
 // ===================== CLOUD SYNC =====================
 
@@ -64,8 +74,10 @@ async function fetchRemoteTransactions() {
 
         APP.transactions = data || [];
         saveState(APP);
+        lastSyncedAt = Date.now();
     } catch (e) {
-        console.warn('Supabase fetch failed', e);
+        console.warn('Supabase fetch failed:', e);
+        updateSyncStatus(false);
     }
 }
 
@@ -119,36 +131,58 @@ async function deleteMonthRemote(monthIndex, year) {
     }
 }
 
+let _realtimeChannel = null;
+let _realtimeRetries = 0;
+const _MAX_RETRIES = 8;
+
 function subscribeRealtime() {
     if (!supabase) return;
-    supabase
-        .channel('transactions-listener')
+    // Remove stale channel before creating a new one
+    if (_realtimeChannel) {
+        supabase.removeChannel(_realtimeChannel);
+        _realtimeChannel = null;
+    }
+    _realtimeChannel = supabase
+        .channel('gfintrac-live-' + Date.now())
         .on('postgres_changes', { event: '*', schema: 'public', table: 'transactions' }, async () => {
-            // Re-fetch transactions when changes occur from other devices
             await fetchRemoteTransactions();
             refreshDashboard();
             refreshInsights();
-            showToast('Synced from another device');
+            showToast('☁️ Synced from another device');
         })
         .subscribe((status) => {
+            console.log('Realtime status:', status);
             if (status === 'SUBSCRIBED') {
-                console.log('Realtime connected');
+                _realtimeRetries = 0;
                 updateSyncStatus(true);
             } else if (status === 'CLOSED' || status === 'CHANNEL_ERROR') {
                 updateSyncStatus(false);
+                // Exponential back-off reconnect
+                if (_realtimeRetries < _MAX_RETRIES) {
+                    _realtimeRetries++;
+                    const delay = Math.min(5000 * _realtimeRetries, 60000);
+                    console.log(`Realtime reconnect in ${delay / 1000}s (attempt ${_realtimeRetries})`);
+                    setTimeout(subscribeRealtime, delay);
+                }
             }
         });
 }
 
 function updateSyncStatus(connected) {
     const syncEl = document.getElementById('syncStatus');
+    const lastSyncEl = document.getElementById('lastSyncTime');
     if (!syncEl) return;
-    if (connected) {
+    if (connected === 'syncing') {
+        syncEl.innerHTML = '<i class="fas fa-sync-alt fa-spin" style="color: var(--accent-light);"></i><span>Syncing...</span>';
+        syncEl.title = 'Syncing data with cloud...';
+    } else if (connected) {
         syncEl.innerHTML = '<i class="fas fa-cloud" style="color: var(--income-color);"></i><span>Synced</span>';
-        syncEl.title = 'Real-time cloud sync is active';
+        syncEl.title = 'Cloud sync is active';
+        if (lastSyncEl) lastSyncEl.textContent = 'Live — realtime sync is active';
     } else {
         syncEl.innerHTML = '<i class="fas fa-cloud" style="color: var(--text-muted); opacity:0.4;"></i><span>Offline</span>';
-        syncEl.title = 'Cloud sync is not connected';
+        syncEl.title = 'Cloud sync unavailable';
+        if (lastSyncEl) lastSyncEl.textContent = 'Enable Realtime on Supabase dashboard for live sync';
     }
 }
 
@@ -173,6 +207,7 @@ const totalIncomeEl = $('#totalIncome');
 const totalExpensesEl = $('#totalExpenses');
 const totalLentEl = $('#totalLent');
 const totalBorrowedEl = $('#totalBorrowed');
+const totalNetBalanceEl = $('#totalNetBalance');
 const savingsRing = $('#savingsRing');
 const savingsPctEl = $('#savingsPct');
 const emergencyRing = $('#emergencyRing');
@@ -188,6 +223,7 @@ const dashAllMonths = $('#dashAllMonths');
 const insightMonthLabel = $('#insightMonthLabel');
 const insightPrevMonth = $('#insightPrevMonth');
 const insightNextMonth = $('#insightNextMonth');
+const insightAllMonths = $('#insightAllMonths');
 
 // Insights
 const insightsIncome = $('#insightsIncome');
@@ -221,7 +257,6 @@ const themeToggle = $('#themeToggle');
 const exportCSVBtn = $('#exportCSV');
 const exportPDFBtn = $('#exportPDF');
 const clearDataBtn = $('#clearDataBtn');
-const changePinBtn = $('#changePinBtn');
 const confirmModal = $('#confirmModal');
 const confirmClearBtn = $('#confirmClearBtn');
 const cancelClearBtn = $('#cancelClearBtn');
@@ -361,6 +396,21 @@ function animateCounter(el, target) {
     requestAnimationFrame(tick);
 }
 
+function animateSignedCounter(el, target) {
+    const duration = 700;
+    const start = performance.now();
+    const abs = Math.abs(target);
+    const sign = target < 0 ? '-' : '';
+    function tick(now) {
+        const elapsed = now - start;
+        const progress = Math.min(elapsed / duration, 1);
+        const ease = 1 - Math.pow(1 - progress, 3);
+        el.textContent = sign + '₹' + Math.round(abs * ease).toLocaleString('en-IN');
+        if (progress < 1) requestAnimationFrame(tick);
+    }
+    requestAnimationFrame(tick);
+}
+
 // ===================== MONTH SWITCHER =====================
 
 function updateMonthLabel(labelEl, monthIndex, year, showAll) {
@@ -389,6 +439,7 @@ function changeMonth(direction, context) {
         refreshInsights();
     } else {
         insightShowAll = false;
+        if (insightAllMonths) insightAllMonths.classList.remove('active');
         insightMonthIndex += direction;
         if (insightMonthIndex > 11) { insightMonthIndex = 0; insightYear++; }
         if (insightMonthIndex < 0) { insightMonthIndex = 11; insightYear--; }
@@ -419,6 +470,19 @@ dashAllMonths.addEventListener('click', toggleAllMonths);
 
 insightPrevMonth.addEventListener('click', () => changeMonth(-1, 'insight'));
 insightNextMonth.addEventListener('click', () => changeMonth(1, 'insight'));
+if (insightAllMonths) {
+    insightAllMonths.addEventListener('click', () => {
+        insightShowAll = !insightShowAll;
+        insightAllMonths.classList.toggle('active', insightShowAll);
+        updateMonthLabel(insightMonthLabel, insightMonthIndex, insightYear, insightShowAll);
+        refreshInsights();
+        // Keep dashboard month in sync
+        dashShowAll = insightShowAll;
+        dashAllMonths.classList.toggle('active', dashShowAll);
+        updateMonthLabel(dashMonthLabel, dashMonthIndex, dashYear, dashShowAll);
+        refreshDashboard();
+    });
+}
 
 // ===================== FILTER HELPERS =====================
 
@@ -493,6 +557,15 @@ function refreshDashboard() {
     animateCounter(totalLentEl, yearTotals.lent);
     animateCounter(totalBorrowedEl, yearTotals.borrowed);
 
+    // Net Balance: Income − Expenses − Emergency − Lent (selected period)
+    if (totalNetBalanceEl) {
+        const netBal = monthTotals.income - monthTotals.expenses
+            - monthTotals.emergencyContrib - monthTotals.lent;
+        totalNetBalanceEl.classList.remove('income-color', 'expense-color');
+        totalNetBalanceEl.classList.add(netBal >= 0 ? 'income-color' : 'expense-color');
+        animateSignedCounter(totalNetBalanceEl, netBal);
+    }
+
     // Savings & Emergency: always show total accumulated across all months
     setRingProgress(savingsRing, savingsPctEl, null, null,
         allTotals.savingsContrib, SAVINGS_TARGET);
@@ -506,6 +579,24 @@ function refreshDashboard() {
 // ===================== CHARTS =====================
 
 let incomeExpenseChart, categoryChart;
+
+// Chart.js plugin: show "No data" message on empty charts
+Chart.register({
+    id: 'noDataOverlay',
+    afterDraw(chart) {
+        const hasData = chart.data.labels && chart.data.labels.length > 0;
+        if (hasData) return;
+        const { ctx, width, height } = chart;
+        ctx.save();
+        ctx.textAlign = 'center';
+        ctx.textBaseline = 'middle';
+        const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+        ctx.fillStyle = isDark ? '#5a5e73' : '#9498b0';
+        ctx.font = "400 13px 'Inter', sans-serif";
+        ctx.fillText('No data for this period', width / 2, height / 2);
+        ctx.restore();
+    }
+});
 
 function getChartColors() {
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -655,13 +746,25 @@ renderCategoryChips(selectedType);
 transactionForm.addEventListener('submit', (e) => {
     e.preventDefault();
 
+    const amount = parseFloat(txnAmountInput.value);
+    if (!amount || amount <= 0) {
+        showToast('Please enter a valid amount greater than 0');
+        txnAmountInput.focus();
+        return;
+    }
+    if (!txnDateInput.value) {
+        showToast('Please select a date');
+        txnDateInput.focus();
+        return;
+    }
+
     let category = selectedCategory === 'custom'
         ? (txnCustomCategoryInput.value.trim() || 'Uncategorized')
         : selectedCategory;
 
     const txn = {
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
-        amount: parseFloat(txnAmountInput.value),
+        id: generateUUID(),
+        amount,
         type: selectedType,
         category,
         date: txnDateInput.value,
@@ -738,7 +841,10 @@ function renderTransactions(txns) {
     const sorted = [...txns].sort((a, b) => new Date(b.date) - new Date(a.date));
 
     txnTableBody.innerHTML = sorted.map((t, i) => {
-        const dateStr = new Date(t.date).toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
+        // Parse ISO date as local time to avoid UTC midnight off-by-one in IST
+        const [y, m, d] = (t.date || '').split('-').map(Number);
+        const dateObj = new Date(y, m - 1, d);
+        const dateStr = dateObj.toLocaleDateString('en-IN', { day: '2-digit', month: 'short', year: 'numeric' });
         return `
             <tr style="animation-delay: ${i * 0.03}s">
                 <td data-label="Date">${dateStr}</td>
@@ -1003,7 +1109,7 @@ uploadArea.addEventListener('drop', (e) => {
 importParsedBtn.addEventListener('click', async () => {
     const count = parsedTransactions.length;
     const newTxns = parsedTransactions.map(t => ({
-        id: Date.now().toString(36) + Math.random().toString(36).slice(2, 7),
+        id: generateUUID(),
         amount: t.amount,
         type: t.type,
         category: t.category,
@@ -1142,7 +1248,7 @@ confirmExportBtn.addEventListener('click', () => {
         const { jsPDF } = window.jspdf;
         const doc = new jsPDF();
         doc.setFontSize(18);
-        doc.text('G-Finrac Transactions', 14, 22);
+        doc.text('G-Fintrac Transactions', 14, 22);
 
         const headers = [['Date', 'Type', 'Category', 'Amount', 'Notes']];
         const data = txnsToExport.map(t => [
@@ -1172,6 +1278,15 @@ exportModal.addEventListener('click', (e) => {
     if (e.target === exportModal) exportModal.classList.remove('show');
 });
 
+// ===================== KEYBOARD SHORTCUTS =====================
+// Enter key in modal inputs fires the confirm action
+exportMonthInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') confirmExportBtn.click();
+});
+confirmMonthInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') confirmClearBtn.click();
+});
+
 // ===================== EXPORT FILENAME HELPER =====================
 
 function getExportFilename(ext, monthInputVal) {
@@ -1184,24 +1299,51 @@ function getExportFilename(ext, monthInputVal) {
     return `All_Transactions.${ext}`;
 }
 
-if (changePinBtn) {
-    changePinBtn.addEventListener('click', () => {
-        const pinTxn = APP.transactions.find(t => t.id === 'settings_pin');
-        if (pinTxn && pinTxn.notes) {
-            pinMode = 'verify_before_change';
-            pinSetupMsg.textContent = 'Enter current PIN to change';
-            document.querySelector('.pin-lock-subtitle').textContent = 'Security Verification';
-        } else {
-            pinMode = 'setup';
-            pinSetupValue = '';
-            pinSetupMsg.textContent = 'Create a new 4-digit PIN';
-            document.querySelector('.pin-lock-subtitle').textContent = 'Set up a new security PIN';
+
+
+// ===================== SYNC MANAGEMENT =====================
+
+const syncNowBtn = document.getElementById('syncNowBtn');
+
+async function syncNow(silent = false) {
+    if (!supabase) { if (!silent) showToast('Cloud sync not configured'); return; }
+    updateSyncStatus('syncing');
+    try {
+        await fetchRemoteTransactions();
+        updateSyncStatus(true);
+        refreshDashboard();
+        refreshInsights();
+        if (!silent) showToast('Synced successfully! ☁️');
+    } catch (e) {
+        updateSyncStatus(false);
+        if (!silent) showToast('Sync failed — check your connection');
+    }
+}
+
+function startSyncPolling() {
+    // Poll every 30 s as a fallback when Supabase Realtime is not enabled
+    setInterval(() => {
+        if (!document.hidden && supabase) {
+            fetchRemoteTransactions()
+                .then(() => { updateSyncStatus(true); refreshDashboard(); refreshInsights(); })
+                .catch(() => updateSyncStatus(false));
         }
-        pinEntry = '';
-        updatePinDots();
-        pinSetupSection.style.display = 'block';
-        pinLockScreen.style.display = 'flex';
-    });
+    }, 30000);
+
+    // Refresh the "last synced" label every 60 s
+    setInterval(() => {
+        if (!lastSyncedAt) return;
+        const secs = Math.floor((Date.now() - lastSyncedAt) / 1000);
+        const el = document.getElementById('lastSyncTime');
+        if (!el) return;
+        if (secs < 60) el.textContent = 'Synced just now';
+        else if (secs < 3600) el.textContent = `Synced ${Math.floor(secs / 60)}m ago`;
+        else el.textContent = 'Synced >1h ago';
+    }, 60000);
+}
+
+if (syncNowBtn) {
+    syncNowBtn.addEventListener('click', () => syncNow(false));
 }
 
 // ===================== PIN LOCK SYSTEM =====================
@@ -1218,21 +1360,9 @@ let pinMode = 'unlock'; // 'unlock', 'setup', 'confirm'
 let pinSetupValue = '';
 
 async function initPinSystem() {
-    await fetchRemoteTransactions();
-    const pinTxn = APP.transactions.find(t => t.id === 'settings_pin');
-    const savedPin = pinTxn ? pinTxn.notes : null;
-
-    if (!savedPin) {
-        // First time — setup mode
-        pinMode = 'setup';
-        pinSetupSection.style.display = 'block';
-        pinSetupMsg.textContent = 'Create a new 4-digit PIN';
-        document.querySelector('.pin-lock-subtitle').textContent = 'Set up your security PIN';
-    } else {
-        pinMode = 'unlock';
-        pinSetupSection.style.display = 'none';
-        document.querySelector('.pin-lock-subtitle').textContent = 'Enter your 4-digit PIN to continue';
-    }
+    pinMode = 'unlock';
+    pinSetupSection.style.display = 'none';
+    document.querySelector('.pin-lock-subtitle').textContent = 'Enter your 4-digit PIN to continue';
     pinLockScreen.style.display = 'flex';
     pinEntry = '';
     updatePinDots();
@@ -1265,76 +1395,9 @@ function handlePinKey(key) {
 }
 
 async function processPin() {
-    if (pinMode === 'verify_before_change') {
-        const pinTxn = APP.transactions.find(t => t.id === 'settings_pin');
-        const savedPin = pinTxn ? pinTxn.notes : null;
-        if (pinEntry === savedPin) {
-            pinMode = 'setup';
-            pinSetupValue = '';
-            pinEntry = '';
-            updatePinDots();
-            pinSetupMsg.textContent = 'Create a new 4-digit PIN';
-            document.querySelector('.pin-lock-subtitle').textContent = 'Set up a new security PIN';
-        } else {
-            pinError.textContent = 'Incorrect current PIN';
-            pinError.classList.add('shake');
-            pinEntry = '';
-            updatePinDots();
-            pinDots.classList.add('shake');
-            setTimeout(() => pinDots.classList.remove('shake'), 500);
-        }
-        return;
-    }
-
-    if (pinMode === 'setup') {
-        // First entry — store temporarily
-        pinSetupValue = pinEntry;
-        pinMode = 'confirm';
-        pinEntry = '';
-        updatePinDots();
-        pinSetupMsg.textContent = 'Confirm your PIN';
-        document.querySelector('.pin-lock-subtitle').textContent = 'Re-enter your 4-digit PIN';
-        return;
-    }
-
-    if (pinMode === 'confirm') {
-        if (pinEntry === pinSetupValue) {
-            // PIN confirmed — save it
-            const pinTxn = {
-                id: 'settings_pin',
-                amount: 0,
-                type: 'settings',
-                category: 'System',
-                date: new Date().toISOString(),
-                notes: pinEntry
-            };
-            APP.transactions = APP.transactions.filter(t => t.id !== 'settings_pin');
-            APP.transactions.push(pinTxn);
-            saveState(APP);
-            
-            // Wait for it to correctly save in DB before continuing, otherwise we get a local override
-            await upsertTransactionRemote(pinTxn);
-            
-            pinLockScreen.style.display = 'none';
-            showToast('PIN created successfully!');
-            initApp();
-        } else {
-            pinError.textContent = 'PINs do not match. Try again.';
-            pinError.classList.add('shake');
-            pinMode = 'setup';
-            pinSetupValue = '';
-            pinEntry = '';
-            updatePinDots();
-            pinSetupMsg.textContent = 'Create a new 4-digit PIN';
-            document.querySelector('.pin-lock-subtitle').textContent = 'Set up your security PIN';
-        }
-        return;
-    }
-
     if (pinMode === 'unlock') {
-        const pinTxn = APP.transactions.find(t => t.id === 'settings_pin');
-        const savedPin = pinTxn ? pinTxn.notes : null;
-        if (pinEntry === savedPin) {
+        const hardcodedPin = '5432';
+        if (pinEntry === hardcodedPin) {
             pinLockScreen.style.display = 'none';
             initApp();
         } else {
@@ -1381,6 +1444,7 @@ async function initApp() {
 
     await fetchRemoteTransactions();
     subscribeRealtime();
+    startSyncPolling();
 
     // Restore last active tab
     switchTab(APP.activeTab || 'dashboard');
