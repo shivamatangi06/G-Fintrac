@@ -1,0 +1,22 @@
+{
+  "name": "G-Fintrac Finance Tracker",
+  "short_name": "G-Fintrac",
+  "description": "Premium Personal Finance Tracker. Track income, expenses, savings and gain financial insights.",
+  "start_url": "./index.html",
+  "display": "standalone",
+  "background_color": "#0b0d17",
+  "theme_color": "#7c3aed",
+  "icons": [
+    {
+      "src": "expense.png",
+      "sizes": "192x192",
+      "type": "image/png",
+      "purpose": "any maskable"
+    },
+    {
+      "src": "expense.png",
+      "sizes": "512x512",
+      "type": "image/png"
+    }
+  ]
+}
