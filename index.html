@@ -76,12 +76,15 @@
 
     <!-- ======================== SIDEBAR ======================== -->
     <aside class="sidebar" id="sidebar">
-        <div class="sidebar-brand">
-            <span class="brand-text">G-Fintrac</span>
-            <button class="hamburger" id="sidebarToggleBtn" aria-label="Collapse sidebar">
-                <span></span>
-                <span></span>
-                <span></span>
+        <div class="sidebar-header">
+            <div class="brand">
+                <div class="brand-logo">
+                    <img src="money_tracker_logo_1775908780500.png" alt="G-Fintrac" style="width: 32px; height: 32px; border-radius: 8px;">
+                </div>
+                <span class="brand-name">G-Fintrac</span>
+            </div>
+            <button class="sidebar-toggle" id="sidebarToggleBtn" title="Toggle Sidebar">
+                <span></span><span></span><span></span>
             </button>
         </div>
 
@@ -154,15 +157,20 @@
             </header>
 
             <!-- Month Switcher -->
-            <div class="month-switcher" id="dashMonthSwitcher">
-                <button class="month-arrow" id="dashPrevMonth" aria-label="Previous month">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <span class="month-label" id="dashMonthLabel">March 2026</span>
-                <button class="month-arrow" id="dashNextMonth" aria-label="Next month">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-                <button class="all-months-btn" id="dashAllMonths">All Months</button>
+            <div class="filter-bar">
+                <div class="month-switcher-group">
+                    <div class="month-switcher">
+                        <button class="btn-icon" id="dashPrevMonth"><i class="fas fa-chevron-left"></i></button>
+                        <span class="month-label" id="dashMonthLabel">March 2026</span>
+                        <button class="btn-icon" id="dashNextMonth"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <button class="btn-all-months" id="dashAllMonths">All Months</button>
+                </div>
+
+                <div class="top-balance-card">
+                    <span class="top-balance-label">Net Balance</span>
+                    <span class="top-balance-value" id="totalNetBalance">₹0</span>
+                </div>
             </div>
 
             <!-- Summary Cards -->
@@ -190,17 +198,10 @@
                     </div>
                 </div>
                 <div class="card summary-card card-borrowed">
-                    <div class="card-icon"><i class="fas fa-hand-holding-heart"></i></div>
+                    <div class="card-icon"><i class="fas fa-hand-holding-dollar"></i></div>
                     <div class="card-info">
-                        <span class="card-label">Borrowed Amount</span>
+                        <span class="card-label">Borrowed</span>
                         <span class="card-value" id="totalBorrowed">₹0</span>
-                    </div>
-                </div>
-                <div class="card summary-card card-balance">
-                    <div class="card-icon"><i class="fas fa-scale-balanced"></i></div>
-                    <div class="card-info">
-                        <span class="card-label">Net Balance</span>
-                        <span class="card-value" id="totalNetBalance">₹0</span>
                     </div>
                 </div>
             </div>
