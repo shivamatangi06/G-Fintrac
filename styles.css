@@ -2453,3 +2453,151 @@ canvas,
 svg {
     max-width: 100%;
 }
+
+/* ======================== FILTER BAR & MONTH SWITCHER ======================== */
+.filter-bar {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 24px;
+    gap: 16px;
+    flex-wrap: wrap;
+}
+
+.month-switcher-group {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    flex-wrap: wrap;
+}
+
+.month-switcher {
+    display: flex;
+    align-items: center;
+    gap: 0;
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    border-radius: 12px;
+    overflow: hidden;
+    backdrop-filter: blur(10px);
+}
+
+.month-label {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--text-primary);
+    padding: 0 14px;
+    white-space: nowrap;
+    min-width: 130px;
+    text-align: center;
+}
+
+.btn-icon {
+    background: none;
+    border: none;
+    color: var(--text-secondary);
+    cursor: pointer;
+    padding: 10px 14px;
+    font-size: 0.9rem;
+    transition: background 0.2s, color 0.2s;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.btn-icon:hover {
+    background: var(--accent-glow);
+    color: var(--accent-light);
+}
+
+.btn-all-months {
+    background: var(--card-bg);
+    border: 1px solid var(--border-color);
+    color: var(--text-secondary);
+    font-size: 0.85rem;
+    font-weight: 600;
+    padding: 9px 16px;
+    border-radius: 10px;
+    cursor: pointer;
+    transition: all 0.2s;
+    backdrop-filter: blur(10px);
+    font-family: var(--font);
+    white-space: nowrap;
+}
+
+.btn-all-months:hover,
+.btn-all-months.active {
+    background: var(--accent);
+    color: #fff;
+    border-color: var(--accent);
+    box-shadow: 0 4px 16px var(--accent-glow);
+}
+
+/* ======================== TOP NET BALANCE CARD ======================== */
+.top-balance-card {
+    background: var(--card-bg);
+    backdrop-filter: blur(12px);
+    border: 1px solid var(--border-color);
+    padding: 12px 20px;
+    border-radius: 16px;
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    min-width: 160px;
+    box-shadow: 0 8px 32px rgba(0,0,0,0.2);
+    border-left: 4px solid var(--income-color);
+    gap: 4px;
+}
+
+.top-balance-label {
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    text-transform: uppercase;
+    letter-spacing: 1px;
+}
+
+.top-balance-value {
+    font-size: 1.4rem;
+    font-weight: 700;
+    letter-spacing: -0.5px;
+    transition: filter 0.3s ease;
+}
+
+.net-balance-blurred {
+    filter: blur(8px);
+    user-select: none;
+    pointer-events: none;
+}
+
+.net-balance-unlock-btn {
+    background: none;
+    border: none;
+    font-size: 0.72rem;
+    color: var(--text-muted);
+    cursor: pointer;
+    padding: 2px 0;
+    font-family: var(--font);
+    display: flex;
+    align-items: center;
+    gap: 5px;
+    transition: color 0.2s;
+    white-space: nowrap;
+}
+
+.net-balance-unlock-btn:hover {
+    color: var(--accent-light);
+}
+
+/* Mobile: stack filter-bar */
+@media (max-width: 600px) {
+    .filter-bar {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    .top-balance-card {
+        align-items: center;
+    }
+    .month-switcher-group {
+        justify-content: center;
+    }
+}
