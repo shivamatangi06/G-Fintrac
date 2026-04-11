@@ -9,7 +9,7 @@
     <meta name="theme-color" content="#7c3aed">
     <meta name="apple-mobile-web-app-capable" content="yes">
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
-    <link rel="apple-touch-icon" href="https://cdn-icons-png.flaticon.com/512/2830/2830284.png">
+    <link rel="apple-touch-icon" href="money_tracker_logo_1775908780500.png">
     <link rel="manifest" href="manifest.json">
     <title>G-Fintrac</title>
 
@@ -167,9 +167,12 @@
                     <button class="btn-all-months" id="dashAllMonths">All Months</button>
                 </div>
 
-                <div class="top-balance-card">
+                <div class="top-balance-card" id="netBalanceCard">
                     <span class="top-balance-label">Net Balance</span>
-                    <span class="top-balance-value" id="totalNetBalance">₹0</span>
+                    <span class="top-balance-value net-balance-blurred" id="totalNetBalance">₹0</span>
+                    <button class="net-balance-unlock-btn" id="netBalanceUnlockBtn" title="Tap to reveal">
+                        <i class="fas fa-eye-slash" id="netBalanceEyeIcon"></i> Tap to reveal
+                    </button>
                 </div>
             </div>
 
@@ -285,15 +288,15 @@
             </header>
 
             <!-- Month Switcher -->
-            <div class="month-switcher" id="insightMonthSwitcher">
-                <button class="month-arrow" id="insightPrevMonth" aria-label="Previous month">
-                    <i class="fas fa-chevron-left"></i>
-                </button>
-                <span class="month-label" id="insightMonthLabel">March 2026</span>
-                <button class="month-arrow" id="insightNextMonth" aria-label="Next month">
-                    <i class="fas fa-chevron-right"></i>
-                </button>
-                <button class="all-months-btn" id="insightAllMonths">All Months</button>
+            <div class="filter-bar">
+                <div class="month-switcher-group">
+                    <div class="month-switcher">
+                        <button class="btn-icon" id="insightPrevMonth"><i class="fas fa-chevron-left"></i></button>
+                        <span class="month-label" id="insightMonthLabel">March 2026</span>
+                        <button class="btn-icon" id="insightNextMonth"><i class="fas fa-chevron-right"></i></button>
+                    </div>
+                    <button class="btn-all-months" id="insightAllMonths">All Months</button>
+                </div>
             </div>
 
             <!-- Month Summary Cards -->
@@ -564,10 +567,10 @@
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
             <h3>Delete Month Data</h3>
-            <p>Enter the month and year to delete only that month's transactions.</p>
-            <input type="text" id="confirmMonthInput" class="input" placeholder="e.g. March 2026">
+            <p>Enter the <strong>secret delete code</strong> for the month you want to erase.</p>
+            <input type="text" id="confirmMonthInput" class="input" placeholder="Enter code (UPPERCASE only)" autocomplete="off" style="text-transform:uppercase; letter-spacing: 2px; font-family: monospace;">
             <div class="modal-actions">
-                <button class="btn btn-danger" id="confirmClearBtn"><i class="fas fa-trash-alt"></i> Delete Month</button>
+                <button class="btn btn-danger" id="confirmClearBtn"><i class="fas fa-trash-alt"></i> Delete</button>
                 <button class="btn btn-secondary" id="cancelClearBtn">Cancel</button>
             </div>
         </div>
