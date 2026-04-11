@@ -26,7 +26,7 @@ function generateUUID() {
     if (typeof crypto !== 'undefined' && crypto.randomUUID) {
         return crypto.randomUUID();
     }
-    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function(c) {
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, function (c) {
         var r = Math.random() * 16 | 0, v = c === 'x' ? r : (r & 0x3 | 0x8);
         return v.toString(16);
     });
@@ -331,7 +331,7 @@ dashAllMonths.addEventListener('click', () => {
     dashAllMonths.classList.toggle('active', dashShowAll);
     updateMonthLabel(dashMonthLabel, dashMonthIndex, dashYear, dashShowAll);
     refreshDashboard();
-    
+
     // Sync insights
     insightShowAll = dashShowAll;
     if (insightAllMonths) insightAllMonths.classList.toggle('active', insightShowAll);
@@ -347,7 +347,7 @@ if (insightAllMonths) {
         insightAllMonths.classList.toggle('active', insightShowAll);
         updateMonthLabel(insightMonthLabel, insightMonthIndex, insightYear, insightShowAll);
         refreshInsights();
-        
+
         // Sync dashboard
         dashShowAll = insightShowAll;
         dashAllMonths.classList.toggle('active', dashShowAll);
@@ -403,7 +403,7 @@ function refreshDashboard() {
     const monthTotals = computeTotals(monthTxns);
 
     const allTotals = computeTotals(APP.transactions);
-    
+
     const yearTxns = dashShowAll
         ? APP.transactions
         : APP.transactions.filter(t => {
@@ -417,12 +417,27 @@ function refreshDashboard() {
     animateCounter(totalLentEl, yearTotals.lent);
     animateCounter(totalBorrowedEl, yearTotals.borrowed);
 
+    const totalNetBalanceEl = document.getElementById('totalNetBalance');
+    const netBalCard = document.getElementById('netBalanceCard');
+
     if (totalNetBalanceEl) {
         const netBal = monthTotals.income - monthTotals.expenses
             - monthTotals.emergencyContrib - monthTotals.savingsContrib - monthTotals.lent;
-        totalNetBalanceEl.classList.remove('income-color', 'expense-color');
-        totalNetBalanceEl.classList.add(netBal >= 0 ? 'income-color' : 'expense-color');
+
         animateSignedCounter(totalNetBalanceEl, netBal);
+
+        // Update pill border color (green = positive, red = negative)
+        if (netBalCard) {
+            netBalCard.style.borderColor = netBal >= 0
+                ? 'rgba(52,211,153,0.4)'
+                : 'rgba(248,113,113,0.4)';
+            netBalCard.style.background = netBal >= 0
+                ? 'linear-gradient(135deg, rgba(52,211,153,0.12), rgba(124,58,237,0.08))'
+                : 'linear-gradient(135deg, rgba(248,113,113,0.12), rgba(124,58,237,0.08))';
+        }
+
+        // Color the value text (only visible when revealed)
+        totalNetBalanceEl.style.color = netBal >= 0 ? '#34d399' : '#f87171';
     }
 
     setRingProgress(savingsRing, savingsPctEl, null, null,
@@ -782,7 +797,7 @@ function guessCategory(description) {
 
 function parseUploadedFile(file) {
     const reader = new FileReader();
-    reader.onload = function(e) {
+    reader.onload = function (e) {
         try {
             let rows = [];
             if (file.name.endsWith('.csv')) {
@@ -802,7 +817,7 @@ function parseUploadedFile(file) {
                 category: guessCategory(String(r[1]))
             }));
             showParsedPreview();
-        } catch(err) { showToast('Parse error'); }
+        } catch (err) { showToast('Parse error'); }
     };
     if (file.name.endsWith('.csv')) reader.readAsText(file);
     else reader.readAsArrayBuffer(file);
@@ -882,10 +897,6 @@ cancelExportBtn.addEventListener('click', () => exportModal.classList.remove('sh
 clearDataBtn.addEventListener('click', () => confirmModal.classList.add('show'));
 confirmClearBtn.addEventListener('click', () => {
     const code = confirmMonthInput.value.trim().toUpperCase();
-    if (!code) {
-        showToast('Enter code to delete (e.g., APRDEL2026)');
-        return;
-    }
 
     if (code === 'CLEARALLDATANOW') {
         APP.transactions = [];
@@ -1010,18 +1021,10 @@ function revealNetBalance() {
     const el = document.getElementById('totalNetBalance');
     const btn = document.getElementById('netBalanceUnlockBtn');
     const icon = document.getElementById('netBalanceEyeIcon');
-    const card = document.getElementById('netBalanceCard');
 
     if (el) el.classList.remove('net-balance-blurred');
     if (icon) icon.className = 'fas fa-eye';
-    if (btn) btn.innerHTML = '<i class="fas fa-eye" id="netBalanceEyeIcon"></i> Visible';
-
-    // Update card border color based on value
-    const raw = el ? el.textContent.replace(/[₹,\-]/g, '').trim() : '0';
-    const val = parseFloat(raw) || 0;
-    if (card) {
-        card.style.borderLeftColor = val >= 0 ? 'var(--income-color)' : 'var(--expense-color)';
-    }
+    if (btn) btn.title = 'Tap to hide';
 
     netBalanceRevealed = true;
 }
@@ -1029,8 +1032,12 @@ function revealNetBalance() {
 function hideNetBalance() {
     const el = document.getElementById('totalNetBalance');
     const btn = document.getElementById('netBalanceUnlockBtn');
+    const icon = document.getElementById('netBalanceEyeIcon');
+
     if (el) el.classList.add('net-balance-blurred');
-    if (btn) btn.innerHTML = '<i class="fas fa-eye-slash" id="netBalanceEyeIcon"></i> Tap to reveal';
+    if (icon) icon.className = 'fas fa-eye-slash';
+    if (btn) btn.title = 'Tap to reveal';
+
     netBalanceRevealed = false;
 }
 
@@ -1053,7 +1060,7 @@ if (netBalanceUnlockBtn) {
 // Auto-uppercase confirmMonthInput as user types
 const confirmMonthInputEl = document.getElementById('confirmMonthInput');
 if (confirmMonthInputEl) {
-    confirmMonthInputEl.addEventListener('input', function() {
+    confirmMonthInputEl.addEventListener('input', function () {
         const pos = this.selectionStart;
         this.value = this.value.toUpperCase();
         this.setSelectionRange(pos, pos);
@@ -1061,6 +1068,8 @@ if (confirmMonthInputEl) {
 }
 
 // ===================== INITIALIZATION =====================
+
+let appInitialized = false;
 
 async function initApp() {
     applyTheme(APP.theme || 'dark');
@@ -1070,12 +1079,41 @@ async function initApp() {
     switchTab(APP.activeTab || 'dashboard');
     refreshDashboard();
     refreshInsights();
+    appInitialized = true;
 }
 
+// ─── INITIAL PAGE LOAD ───────────────────────────────────────────────────────
 initPinSystem();
 
+// ─── RE-LOCK PIN when app comes back from background ─────────────────────────
+// Covers: tab switch back, Android PWA home button, screen off/on
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') {
+        // Mark that we need to re-lock
+        sessionStorage.setItem('gf_needs_pin', '1');
+    } else if (document.visibilityState === 'visible') {
+        if (sessionStorage.getItem('gf_needs_pin') === '1') {
+            sessionStorage.removeItem('gf_needs_pin');
+            hideNetBalance();       // blur net balance again
+            initPinSystem();        // show PIN screen
+        }
+    }
+});
+
+// Covers: bfcache restore (browser back button returning to page)
+window.addEventListener('pageshow', (event) => {
+    if (event.persisted) {
+        hideNetBalance();
+        initPinSystem();
+    }
+});
+
+// ─── PWA Service Worker ───────────────────────────────────────────────────────
 if ('serviceWorker' in navigator) {
     window.addEventListener('load', () => {
-        navigator.serviceWorker.register('./service-worker.js').catch(() => {});
+        navigator.serviceWorker
+            .register('./service-worker.js', { scope: './' })
+            .then(() => console.log('[PWA] Service Worker registered'))
+            .catch((err) => console.warn('[PWA] SW failed:', err));
     });
 }
