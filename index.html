@@ -578,7 +578,9 @@
             </div>
             <h3>Export Data</h3>
             <p>Enter month and year to export that period, or leave blank to export all data.</p>
-            <input type="text" id="exportMonthInput" class="input">
+            <input type="text" id="exportMonthInput" class="input" autocomplete="off"
+                placeholder="e.g. May 2026  (leave blank for all data)"
+                style="font-family: var(--font); letter-spacing: 1px;">
             <div class="modal-actions">
                 <button class="btn btn-primary" id="confirmExportBtn"><i class="fas fa-download"></i> Export</button>
                 <button class="btn btn-secondary" id="cancelExportBtn">Cancel</button>
