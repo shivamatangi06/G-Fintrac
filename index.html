@@ -62,6 +62,9 @@
             <!-- STEP 2: OTP CODE STEP -->
             <div id="otpCodeStep" class="hidden-element">
                 <p class="pin-lock-subtitle">Enter the 6-digit OTP sent to <strong id="otpSentEmail"></strong></p>
+                <div class="otp-banner" id="otpBanner">
+                    <i class="fas fa-key"></i> OTP Code: <strong id="otpDisplayCode">------</strong>
+                </div>
                 <div class="otp-boxes-container" id="otpInputsContainer">
                     <input type="text" maxlength="1" class="otp-input-box" data-index="0" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
                     <input type="text" maxlength="1" class="otp-input-box" data-index="1" inputmode="numeric" pattern="[0-9]*">
