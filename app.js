@@ -1,20 +1,19 @@
 /**
  * ============================================================================
- * MoneyFlow — Personal Finance Tracker (v2.4.0)
- * Modern, Offline-First Web Application | EmailJS Real Email OTP Delivery
+ * MoneyFlow — Personal Finance Tracker (v3.0.0)
+ * Modern, Offline-First Web Application | Security PIN & Annual Filtering
  * ============================================================================
  * 
  * Features:
- * - Real Email OTP Delivery via EmailJS SDK (delivers 6-digit OTP directly to inbox)
- * - Automatic on-screen fallback toast so login is never blocked if keys are unconfigured
- * - EmailJS Key Configuration Manager in Settings
- * - Session state persistence (user email & login status saved to localStorage)
+ * - 4-Digit Security PIN Lock Screen (Default PIN: 5432)
+ * - Security PIN Manager in Settings
+ * - Annual vs Monthly Filtering Mode
+ * - Monthly-Specific Income & Expenses Summary Display
  * - Net Balance calculation with instant privacy blur/unblur toggle
  * - Income, expense, lending, borrowing, and goal tracking
  * - Dynamic Analytics with Chart.js & SVG Progress Rings
  * - Bank statement CSV/Excel parser with auto-categorization & date extraction
  * - Data Export (CSV & PDF with autoTable formatting)
- * - Auto-migration from legacy G-Fintrac data to MoneyFlow
  */
 
 // ============================================================================
@@ -36,13 +35,8 @@ const DEFAULT_STATE = {
     transactions: [],
     theme: 'dark',
     activeTab: 'dashboard',
-    userEmail: null,
-    isLoggedIn: false,
-    emailJsConfig: {
-        serviceId: '',
-        templateId: '',
-        publicKey: ''
-    }
+    pin: '5432',
+    isLoggedIn: false
 };
 
 /** Month names and short abbreviations */
@@ -139,6 +133,8 @@ const hamburgerBtn = $('#hamburgerBtn');
 const sidebarToggleBtn = $('#sidebarToggleBtn');
 
 // Dashboard Summary & Goals
+const dashIncomeCard = $('#dashIncomeCard');
+const dashExpenseCard = $('#dashExpenseCard');
 const totalIncomeEl = $('#totalIncome');
 const totalExpensesEl = $('#totalExpenses');
 const totalLentEl = $('#totalLent');
@@ -163,6 +159,8 @@ const insightMonthLabel = $('#insightMonthLabel');
 const insightPrevMonth = $('#insightPrevMonth');
 const insightNextMonth = $('#insightNextMonth');
 const insightAllMonths = $('#insightAllMonths');
+const insightsIncomeCard = $('#insightsIncomeCard');
+const insightsExpensesCard = $('#insightsExpensesCard');
 const insightsIncome = $('#insightsIncome');
 const insightsExpenses = $('#insightsExpenses');
 const insightsSavingsPct = $('#insightsSavingsPct');
@@ -195,14 +193,18 @@ const cancelParsedBtn = $('#cancelParsedBtn');
 
 // Settings & Account
 const themeToggle = $('#themeToggle');
-const accountEmailEl = $('#accountEmail');
 const logoutBtn = $('#logoutBtn');
+const changePinBtn = $('#changePinBtn');
 const exportCSVBtn = $('#exportCSV');
 const exportPDFBtn = $('#exportPDF');
 const clearDataBtn = $('#clearDataBtn');
-const configEmailJsBtn = $('#configEmailJsBtn');
 
 // Modals
+const pinChangeModal = $('#pinChangeModal');
+const newPinInput = $('#newPinInput');
+const savePinBtn = $('#savePinBtn');
+const cancelPinBtn = $('#cancelPinBtn');
+
 const exportModal = $('#exportModal');
 const exportMonthInput = $('#exportMonthInput');
 const confirmExportBtn = $('#confirmExportBtn');
@@ -217,26 +219,11 @@ const deleteTxnModal = $('#deleteTxnModal');
 const confirmDeleteTxnBtn = $('#confirmDeleteTxnBtn');
 const cancelDeleteTxnBtn = $('#cancelDeleteTxnBtn');
 
-const emailJsModal = $('#emailJsModal');
-const emailJsServiceId = $('#emailJsServiceId');
-const emailJsTemplateId = $('#emailJsTemplateId');
-const emailJsPublicKey = $('#emailJsPublicKey');
-const saveEmailJsBtn = $('#saveEmailJsBtn');
-const cancelEmailJsBtn = $('#cancelEmailJsBtn');
-
-// Email OTP Elements
-const otpLoginScreen = $('#otpLoginScreen');
-const otpEmailStep = $('#otpEmailStep');
-const otpCodeStep = $('#otpCodeStep');
-const otpEmailInput = $('#otpEmailInput');
-const sendOtpBtn = $('#sendOtpBtn');
-const otpSentEmail = $('#otpSentEmail');
-const otpInputsContainer = $('#otpInputsContainer');
-const otpError = $('#otpError');
-const verifyOtpBtn = $('#verifyOtpBtn');
-const resendOtpBtn = $('#resendOtpBtn');
-const resendTimer = $('#resendTimer');
-const changeEmailBtn = $('#changeEmailBtn');
+// PIN Lock Screen Elements
+const pinLockScreen = $('#pinLockScreen');
+const pinDotsContainer = $('#pinDots');
+const pinError = $('#pinError');
+const pinKeypad = $('#pinKeypad');
 
 // UI Components
 const fabAddTxn = $('#fabAddTxn');
@@ -260,11 +247,11 @@ let insightShowAll = false;
  * @param {HTMLElement} labelEl - Element to update
  * @param {number} monthIndex - Month (0-11)
  * @param {number} year - Year (YYYY)
- * @param {boolean} showAll - Whether 'All Months' mode is active
+ * @param {boolean} showAll - Whether 'Annual' mode is active
  */
 function updateMonthLabel(labelEl, monthIndex, year, showAll) {
     if (!labelEl) return;
-    labelEl.textContent = showAll ? 'All Months' : `${MONTH_NAMES[monthIndex]} ${year}`;
+    labelEl.textContent = showAll ? 'Annual' : `${MONTH_NAMES[monthIndex]} ${year}`;
 }
 
 /**
@@ -386,7 +373,7 @@ function isMobile() {
 
 /** Toggles side navigation drawer */
 function toggleSidebar() {
-    if (otpLoginScreen && otpLoginScreen.style.display !== 'none') return;
+    if (pinLockScreen && pinLockScreen.style.display !== 'none') return;
     const isOpen = !sidebar.classList.contains('open');
     sidebar.classList.toggle('open', isOpen);
     sidebarBackdrop.classList.toggle('show', isOpen);
@@ -465,255 +452,117 @@ function showToast(message) {
 }
 
 // ============================================================================
-// 7. EMAIL OTP AUTHENTICATION ENGINE (With EmailJS Support)
+// 7. SECURITY PIN LOCK SYSTEM (Default PIN: 5432)
 // ============================================================================
 
-let activeOtp = null;
-let otpTargetEmail = '';
-let resendTimerInterval = null;
+let enteredPin = '';
 
-/** Validates email string format */
-function isValidEmail(email) {
-    return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email);
+/** Displays screen lock overlay */
+function showPinScreen() {
+    if (!pinLockScreen) return;
+    pinLockScreen.style.display = 'flex';
+    enteredPin = '';
+    updatePinDots();
+    if (pinError) pinError.textContent = '';
 }
 
-/** Displays Email OTP login screen */
-function showOtpScreen() {
-    if (!otpLoginScreen) return;
-    otpLoginScreen.style.display = 'flex';
-    if (otpEmailStep) otpEmailStep.classList.remove('hidden-element');
-    if (otpCodeStep) otpCodeStep.classList.add('hidden-element');
-    if (otpError) otpError.textContent = '';
-    clearOtpInputBoxes();
-}
-
-/** Clears all 6 OTP input box values */
-function clearOtpInputBoxes() {
-    if (!otpInputsContainer) return;
-    const boxes = otpInputsContainer.querySelectorAll('.otp-input-box');
-    boxes.forEach(box => { box.value = ''; box.classList.remove('error'); });
-}
-
-/** Gets combined string from the 6 OTP input boxes */
-function getEnteredOtp() {
-    if (!otpInputsContainer) return '';
-    const boxes = otpInputsContainer.querySelectorAll('.otp-input-box');
-    let code = '';
-    boxes.forEach(b => code += b.value.trim());
-    return code;
-}
-
-/** Starts 60-second countdown for Resend OTP link */
-function startResendTimer() {
-    if (!resendOtpBtn || !resendTimer) return;
-    let secondsLeft = 60;
-    resendOtpBtn.disabled = true;
-    resendTimer.textContent = secondsLeft;
-
-    if (resendTimerInterval) clearInterval(resendTimerInterval);
-
-    resendTimerInterval = setInterval(() => {
-        secondsLeft--;
-        resendTimer.textContent = secondsLeft;
-        if (secondsLeft <= 0) {
-            clearInterval(resendTimerInterval);
-            resendOtpBtn.disabled = false;
-            resendOtpBtn.innerHTML = 'Resend OTP';
-        }
-    }, 1000);
-}
-
-/** Generates and dispatches a 6-digit OTP with on-screen display & email delivery */
-function generateAndSendOtp(email) {
-    activeOtp = String(Math.floor(100000 + Math.random() * 900000));
-    otpTargetEmail = email;
-
-    if (otpSentEmail) otpSentEmail.textContent = email;
-    const otpDisplayCode = $('#otpDisplayCode');
-    if (otpDisplayCode) otpDisplayCode.textContent = activeOtp;
-
-    if (otpEmailStep) otpEmailStep.classList.add('hidden-element');
-    if (otpCodeStep) otpCodeStep.classList.remove('hidden-element');
-    if (otpError) otpError.textContent = '';
-
-    clearOtpInputBoxes();
-    const firstBox = otpInputsContainer ? otpInputsContainer.querySelector('.otp-input-box[data-index="0"]') : null;
-    if (firstBox) firstBox.focus();
-
-    startResendTimer();
-
-    // Dispatch real email via FormSubmit AJAX endpoint (zero config required)
-    fetch(`https://formsubmit.co/ajax/${encodeURIComponent(email)}`, {
-        method: 'POST',
-        headers: {
-            'Content-Type': 'application/json',
-            'Accept': 'application/json'
-        },
-        body: JSON.stringify({
-            _subject: 'Your MoneyFlow OTP Login Code',
-            message: `Your MoneyFlow login OTP is: ${activeOtp}. Enter this 6-digit code to log in.`
-        })
-    }).then(res => res.json()).then(data => {
-        console.log('FormSubmit delivery status:', data);
-    }).catch(err => {
-        console.log('FormSubmit notice:', err);
-    });
-
-    // Also send via EmailJS if custom keys are configured in Settings
-    const config = APP.emailJsConfig || {};
-    const hasEmailJsKeys = config.serviceId && config.templateId && config.publicKey;
-
-    if (typeof emailjs !== 'undefined' && hasEmailJsKeys) {
-        emailjs.send(
-            config.serviceId,
-            config.templateId,
-            {
-                to_email: email,
-                otp_code: activeOtp,
-                pass_code: activeOtp,
-                app_name: 'MoneyFlow'
-            },
-            config.publicKey
-        ).catch(err => console.error('EmailJS send error:', err));
-    }
-
-    showToast(`✉️ Sending OTP to ${email}! Check inbox or use code above.`);
-}
-
-// Send OTP Button Click Handler
-if (sendOtpBtn) {
-    sendOtpBtn.addEventListener('click', () => {
-        const email = otpEmailInput.value.trim();
-        if (!email || !isValidEmail(email)) {
-            showToast('Please enter a valid email address');
-            otpEmailInput.focus();
-            return;
-        }
-        generateAndSendOtp(email);
+/** Updates visual filled state of the 4 PIN dots */
+function updatePinDots() {
+    if (!pinDotsContainer) return;
+    const dots = pinDotsContainer.querySelectorAll('.pin-dot');
+    dots.forEach((dot, index) => {
+        dot.classList.toggle('filled', index < enteredPin.length);
     });
 }
 
-// Resend OTP Button Click Handler
-if (resendOtpBtn) {
-    resendOtpBtn.addEventListener('click', () => {
-        if (!otpTargetEmail) return;
-        generateAndSendOtp(otpTargetEmail);
-        showToast('Resending OTP...');
-    });
-}
-
-// Change Email Link Handler
-if (changeEmailBtn) {
-    changeEmailBtn.addEventListener('click', () => {
-        if (otpEmailStep) otpEmailStep.classList.remove('hidden-element');
-        if (otpCodeStep) otpCodeStep.classList.add('hidden-element');
-        if (resendTimerInterval) clearInterval(resendTimerInterval);
-        if (otpEmailInput) otpEmailInput.focus();
-    });
-}
-
-// Setup input navigation for 6 OTP boxes
-if (otpInputsContainer) {
-    const boxes = otpInputsContainer.querySelectorAll('.otp-input-box');
-    boxes.forEach((box, index) => {
-        box.addEventListener('input', (e) => {
-            const val = e.target.value;
-            if (val.length >= 1) {
-                box.value = val.slice(-1);
-                if (index < boxes.length - 1) {
-                    boxes[index + 1].focus();
-                }
-            }
-            if (getEnteredOtp().length === 6) {
-                verifyUserOtp();
-            }
-        });
-
-        box.addEventListener('keydown', (e) => {
-            if (e.key === 'Backspace' && !box.value && index > 0) {
-                boxes[index - 1].focus();
-            }
-        });
-
-        box.addEventListener('paste', (e) => {
-            e.preventDefault();
-            const pasted = (e.clipboardData || window.clipboardData).getData('text').trim();
-            if (/^\d{6}$/.test(pasted)) {
-                pasted.split('').forEach((char, i) => {
-                    if (boxes[i]) boxes[i].value = char;
-                });
-                verifyUserOtp();
-            }
-        });
-    });
-}
-
-/** Verifies entered 6-digit OTP */
-function verifyUserOtp() {
-    const entered = getEnteredOtp();
-    if (entered.length < 6) {
-        if (otpError) otpError.textContent = 'Please enter all 6 digits of the OTP';
+/** Handles number keypad input */
+function handlePinKey(key) {
+    if (key === 'delete') {
+        enteredPin = enteredPin.slice(0, -1);
+        updatePinDots();
+        if (pinError) pinError.textContent = '';
         return;
     }
 
-    if (entered === activeOtp) {
-        APP.userEmail = otpTargetEmail;
-        APP.isLoggedIn = true;
-        saveState(APP);
+    if (enteredPin.length < 4 && /^[0-9]$/.test(key)) {
+        enteredPin += key;
+        updatePinDots();
+        if (pinError) pinError.textContent = '';
 
-        if (otpLoginScreen) otpLoginScreen.style.display = 'none';
-        initApp();
-        showToast(`Welcome back, ${APP.userEmail}!`);
-    } else {
-        if (otpError) {
-            otpError.textContent = 'Incorrect OTP code. Please check and try again.';
-            otpError.classList.remove('shake');
-            void otpError.offsetWidth;
-            otpError.classList.add('shake');
+        if (enteredPin.length === 4) {
+            setTimeout(verifyPin, 100);
         }
-        if ("vibrate" in navigator) navigator.vibrate(100);
-        clearOtpInputBoxes();
-        const firstBox = otpInputsContainer.querySelector('.otp-input-box[data-index="0"]');
-        if (firstBox) firstBox.focus();
     }
 }
 
-if (verifyOtpBtn) {
-    verifyOtpBtn.addEventListener('click', verifyUserOtp);
-}
+/** Verifies entered PIN against saved PIN (default: 5432) */
+function verifyPin() {
+    const targetPin = APP.pin || '5432';
 
-// EmailJS Setup Modal Listeners
-if (configEmailJsBtn) {
-    configEmailJsBtn.addEventListener('click', () => {
-        const config = APP.emailJsConfig || {};
-        if (emailJsServiceId) emailJsServiceId.value = config.serviceId || '';
-        if (emailJsTemplateId) emailJsTemplateId.value = config.templateId || '';
-        if (emailJsPublicKey) emailJsPublicKey.value = config.publicKey || '';
-        if (emailJsModal) emailJsModal.classList.add('show');
-    });
-}
-
-if (saveEmailJsBtn) {
-    saveEmailJsBtn.addEventListener('click', () => {
-        const sId = emailJsServiceId.value.trim();
-        const tId = emailJsTemplateId.value.trim();
-        const pKey = emailJsPublicKey.value.trim();
-
-        APP.emailJsConfig = { serviceId: sId, templateId: tId, publicKey: pKey };
+    if (enteredPin === targetPin) {
+        APP.isLoggedIn = true;
         saveState(APP);
-
-        if (pKey && typeof emailjs !== 'undefined') {
-            emailjs.init(pKey);
+        if (pinLockScreen) pinLockScreen.style.display = 'none';
+        initApp();
+        showToast('Welcome back to MoneyFlow!');
+    } else {
+        if (pinError) {
+            pinError.textContent = 'Incorrect PIN code. Default is 5432.';
+            pinError.classList.remove('shake');
+            void pinError.offsetWidth;
+            pinError.classList.add('shake');
         }
+        if ("vibrate" in navigator) navigator.vibrate(100);
+        enteredPin = '';
+        updatePinDots();
+    }
+}
 
-        if (emailJsModal) emailJsModal.classList.remove('show');
-        showToast('EmailJS keys saved successfully!');
+if (pinKeypad) {
+    pinKeypad.querySelectorAll('.keypad-btn').forEach(btn => {
+        btn.addEventListener('click', () => {
+            const key = btn.dataset.key;
+            if (key) handlePinKey(key);
+        });
     });
 }
 
-if (cancelEmailJsBtn) {
-    cancelEmailJsBtn.addEventListener('click', () => {
-        if (emailJsModal) emailJsModal.classList.remove('show');
+// Physical keyboard listener for PIN input
+document.addEventListener('keydown', (e) => {
+    if (pinLockScreen && pinLockScreen.style.display !== 'none') {
+        if (e.key >= '0' && e.key <= '9') {
+            handlePinKey(e.key);
+        } else if (e.key === 'Backspace') {
+            handlePinKey('delete');
+        }
+    }
+});
+
+// Change PIN Modal Listeners in Settings
+if (changePinBtn) {
+    changePinBtn.addEventListener('click', () => {
+        if (newPinInput) newPinInput.value = '';
+        if (pinChangeModal) pinChangeModal.classList.add('show');
+    });
+}
+
+if (savePinBtn) {
+    savePinBtn.addEventListener('click', () => {
+        const val = newPinInput ? newPinInput.value.trim() : '';
+        if (!/^\d{4}$/.test(val)) {
+            showToast('PIN must be exactly 4 numeric digits');
+            return;
+        }
+        APP.pin = val;
+        saveState(APP);
+        if (pinChangeModal) pinChangeModal.classList.remove('show');
+        showToast('Security PIN updated successfully!');
+    });
+}
+
+if (cancelPinBtn) {
+    cancelPinBtn.addEventListener('click', () => {
+        if (pinChangeModal) pinChangeModal.classList.remove('show');
     });
 }
 
@@ -750,10 +599,18 @@ if (logoutBtn) {
         APP.isLoggedIn = false;
         saveState(APP);
         hideNetBalance();
-        showOtpScreen();
-        showToast('Logged out successfully');
+        showPinScreen();
+        showToast('App locked successfully');
     });
 }
+
+// Re-lock screen on window blur / visibility change
+document.addEventListener('visibilitychange', () => {
+    if (document.hidden) {
+        APP.isLoggedIn = false;
+        saveState(APP);
+    }
+});
 
 // ============================================================================
 // 8. FINANCIAL CALCULATIONS & ANIMATED COUNTERS
@@ -839,8 +696,17 @@ function refreshDashboard() {
         });
     const yearTotals = computeTotals(yearTxns);
 
-    animateCounter(totalIncomeEl, monthTotals.income);
-    animateCounter(totalExpensesEl, monthTotals.expenses);
+    // CONDITIONAL VISIBILITY: Show Income & Expenses cards ONLY when specific month is selected
+    if (dashShowAll) {
+        if (dashIncomeCard) dashIncomeCard.style.display = 'none';
+        if (dashExpenseCard) dashExpenseCard.style.display = 'none';
+    } else {
+        if (dashIncomeCard) dashIncomeCard.style.display = 'flex';
+        if (dashExpenseCard) dashExpenseCard.style.display = 'flex';
+        animateCounter(totalIncomeEl, monthTotals.income);
+        animateCounter(totalExpensesEl, monthTotals.expenses);
+    }
+
     animateCounter(totalLentEl, yearTotals.lent);
     animateCounter(totalBorrowedEl, yearTotals.borrowed);
 
@@ -1215,8 +1081,17 @@ function refreshInsights() {
     const filtered = getFilteredTxns(insightMonthIndex, insightYear, insightShowAll);
     const totals = computeTotals(filtered);
 
-    if (insightsIncome) insightsIncome.textContent = '₹' + totals.income.toLocaleString('en-IN');
-    if (insightsExpenses) insightsExpenses.textContent = '₹' + totals.expenses.toLocaleString('en-IN');
+    // CONDITIONAL VISIBILITY: Show Income & Expenses cards ONLY when specific month is selected
+    if (insightShowAll) {
+        if (insightsIncomeCard) insightsIncomeCard.style.display = 'none';
+        if (insightsExpensesCard) insightsExpensesCard.style.display = 'none';
+    } else {
+        if (insightsIncomeCard) insightsIncomeCard.style.display = 'flex';
+        if (insightsExpensesCard) insightsExpensesCard.style.display = 'flex';
+        if (insightsIncome) insightsIncome.textContent = '₹' + totals.income.toLocaleString('en-IN');
+        if (insightsExpenses) insightsExpenses.textContent = '₹' + totals.expenses.toLocaleString('en-IN');
+    }
+
     if (insightsSavingsPct) insightsSavingsPct.textContent = (totals.income > 0 ? Math.round((totals.savingsContrib / totals.income) * 100) : 0) + '%';
     if (insightsEmergencyPct) insightsEmergencyPct.textContent = (totals.income > 0 ? Math.round((totals.emergencyContrib / totals.income) * 100) : 0) + '%';
     if (insightsLent) insightsLent.textContent = '₹' + totals.lent.toLocaleString('en-IN');
@@ -1567,23 +1442,10 @@ if (confirmMonthInputEl) {
 // 14. APPLICATION INITIALIZATION
 // ============================================================================
 
-/** Initializes core components after Email OTP login */
+/** Initializes core components after PIN verification */
 async function initApp() {
     applyTheme(APP.theme || 'dark');
     if (txnDateInput) txnDateInput.valueAsDate = new Date();
-
-    if (accountEmailEl) {
-        accountEmailEl.textContent = APP.userEmail || 'user@example.com';
-    }
-
-    const config = APP.emailJsConfig || {};
-    if (config.publicKey && typeof emailjs !== 'undefined') {
-        try {
-            emailjs.init(config.publicKey);
-        } catch (e) {
-            console.error('EmailJS init error:', e);
-        }
-    }
 
     updateMonthLabel(dashMonthLabel, dashMonthIndex, dashYear, dashShowAll);
     updateMonthLabel(insightMonthLabel, insightMonthIndex, insightYear, insightShowAll);
@@ -1594,11 +1456,11 @@ async function initApp() {
 }
 
 // Initial Authentication Check
-if (APP.isLoggedIn && APP.userEmail) {
-    if (otpLoginScreen) otpLoginScreen.style.display = 'none';
+if (APP.isLoggedIn) {
+    if (pinLockScreen) pinLockScreen.style.display = 'none';
     initApp();
 } else {
-    showOtpScreen();
+    showPinScreen();
 }
 
 // Unregister any active service worker from previous PWA installations
