@@ -2788,4 +2788,26 @@ svg {
     color: var(--text-muted);
 }
 
+.otp-banner {
+    background: rgba(124, 58, 237, 0.15);
+    border: 1px solid rgba(167, 139, 250, 0.4);
+    color: #a78bfa;
+    padding: 10px 16px;
+    border-radius: 12px;
+    margin: 12px 0 16px 0;
+    font-size: 0.92rem;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 8px;
+}
+
+.otp-banner strong {
+    color: #34d399;
+    font-size: 1.15rem;
+    letter-spacing: 3px;
+    font-family: var(--font);
+}
+
+
 
