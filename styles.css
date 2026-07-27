@@ -1,5 +1,5 @@
 /* =========================================================
-   FinanceFlow — Premium Personal Finance Tracker
+   MoneyFlow — Premium Personal Finance Tracker
    Glassmorphism | Responsive | Dark/Light | Collapsible Sidebar
    ========================================================= */
 
@@ -2688,3 +2688,104 @@ svg {
     .month-label { min-width: 90px; font-size: 0.82rem; }
     .net-balance-inline-label i { display: none; } /* hide icon on tiny screens */
 }
+
+/* ======================== UTILITY CLASSES ======================== */
+.hidden-element {
+    display: none !important;
+}
+
+.mt-1 {
+    margin-top: 6px !important;
+}
+
+.text-left {
+    text-align: left !important;
+}
+
+.input-styled {
+    font-family: var(--font);
+    letter-spacing: 1px;
+}
+
+.uppercase-input {
+    text-transform: uppercase;
+    letter-spacing: 2px;
+    font-family: var(--font);
+}
+
+/* ======================== EMAIL OTP LOGIN STYLES ======================== */
+.otp-card {
+    max-width: 440px;
+    padding: 30px 24px;
+}
+
+.otp-boxes-container {
+    display: flex;
+    gap: 8px;
+    justify-content: center;
+    margin: 20px 0 10px 0;
+}
+
+.otp-input-box {
+    width: 46px;
+    height: 54px;
+    font-size: 1.5rem;
+    text-align: center;
+    border-radius: 12px;
+    border: 2px solid var(--border-color);
+    background: var(--input-bg);
+    color: var(--text-primary);
+    font-weight: 700;
+    transition: border-color 0.2s, box-shadow 0.2s;
+    font-family: var(--font);
+}
+
+.otp-input-box:focus {
+    border-color: var(--accent);
+    outline: none;
+    box-shadow: 0 0 12px var(--accent-glow);
+}
+
+.btn-full-width {
+    width: 100%;
+    justify-content: center;
+    margin-top: 15px;
+    padding: 12px;
+}
+
+.otp-actions-footer {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 10px;
+    margin-top: 18px;
+    font-size: 0.85rem;
+}
+
+.link-btn {
+    background: none;
+    border: none;
+    color: var(--accent-light);
+    cursor: pointer;
+    text-decoration: underline;
+    font-size: 0.85rem;
+    font-family: var(--font);
+    padding: 0;
+    transition: color 0.2s;
+}
+
+.link-btn:hover:not(:disabled) {
+    color: #fff;
+}
+
+.link-btn:disabled {
+    color: var(--text-muted);
+    cursor: not-allowed;
+    text-decoration: none;
+}
+
+.divider {
+    color: var(--text-muted);
+}
+
+
