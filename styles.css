@@ -45,12 +45,6 @@
 }
 
 .pin-lock-card .pin-lock-header {
-    display: flex;
-    align-items: center;
-    justify-content: center;
-    gap: 16px;
-    margin-bottom: 20px;
-}
 
 .pin-lock-header h2 {
     font-size: 2rem;
@@ -73,7 +67,7 @@
     justify-content: center;
     font-size: 1.6rem;
     color: var(--accent-light);
-    box-shadow: 0 8px 32px var(--accent-glow), inset 0 0 0 1px rgba(255,255,255,0.1);
+    box-shadow: 0 8px 32px var(--accent-glow), inset 0 0 0 1px rgba(255, 255, 255, 0.1);
     backdrop-filter: blur(10px);
     overflow: hidden;
     flex-shrink: 0;
@@ -234,15 +228,31 @@
 
 /* Shake animation */
 @keyframes shake {
-    0%, 100% { transform: translateX(0); }
-    20% { transform: translateX(-10px); }
-    40% { transform: translateX(10px); }
-    60% { transform: translateX(-10px); }
-    80% { transform: translateX(10px); }
+
+    0%,
+    100% {
+        transform: translateX(0);
+    }
+
+    20% {
+        transform: translateX(-10px);
+    }
+
+    40% {
+        transform: translateX(10px);
+    }
+
+    60% {
+        transform: translateX(-10px);
+    }
+
+    80% {
+        transform: translateX(10px);
+    }
 }
 
 .shake {
-    animation: shake 0.4s cubic-bezier(.36,.07,.19,.97) both;
+    animation: shake 0.4s cubic-bezier(.36, .07, .19, .97) both;
 }
 
 /* ======================== CSS VARIABLES ======================== */
@@ -386,7 +396,8 @@ select,
     height: 100vh;
     position: fixed;
     top: 0;
-    left: -280px; /* Hidden by default */
+    left: -280px;
+    /* Hidden by default */
     z-index: 300;
     display: flex;
     flex-direction: column;
@@ -686,6 +697,7 @@ select,
         opacity: 0;
         transform: scale(0.98) translateY(10px);
     }
+
     to {
         opacity: 1;
         transform: scale(1) translateY(0);
@@ -698,12 +710,14 @@ select,
     justify-content: space-between;
     align-items: flex-start;
     gap: 20px;
-    flex-wrap: wrap; /* allow wrapping on smaller screens */
+    flex-wrap: wrap;
+    /* allow wrapping on smaller screens */
 }
 
 .tab-header-left {
     flex: 1;
-    min-width: 200px; /* prevent it from shrinking too much */
+    min-width: 200px;
+    /* prevent it from shrinking too much */
 }
 
 .tab-header h1 {
@@ -1977,8 +1991,10 @@ input[type="date"] {
     gap: 8px;
     padding: 8px 14px;
     cursor: pointer;
-    border: 1px solid rgba(52,211,153,0.3) !important; /* Income style green border */
-    background: rgba(52,211,153,0.12); /* Income style green background */
+    border: 1px solid rgba(52, 211, 153, 0.3) !important;
+    /* Income style green border */
+    background: rgba(52, 211, 153, 0.12);
+    /* Income style green background */
     border-radius: 10px;
     transition: all 0.25s cubic-bezier(0.4, 0, 0.2, 1);
     backdrop-filter: blur(10px);
@@ -1989,10 +2005,10 @@ input[type="date"] {
 }
 
 .net-balance-btn:hover {
-    background: rgba(52,211,153,0.2) !important;
-    border-color: rgba(52,211,153,0.5) !important;
+    background: rgba(52, 211, 153, 0.2) !important;
+    border-color: rgba(52, 211, 153, 0.5) !important;
     transform: translateY(-2px);
-    box-shadow: 0 6px 20px rgba(52,211,153,0.2);
+    box-shadow: 0 6px 20px rgba(52, 211, 153, 0.2);
 }
 
 
@@ -2162,7 +2178,8 @@ input[type="date"] {
         justify-content: flex-start;
         overflow-x: auto;
         -webkit-overflow-scrolling: touch;
-        padding-bottom: 4px; /* for scrollbar */
+        padding-bottom: 4px;
+        /* for scrollbar */
     }
 
     .month-label {
@@ -2187,9 +2204,11 @@ input[type="date"] {
         -webkit-overflow-scrolling: touch;
         width: 100%;
     }
+
     .txn-table {
         width: 100%;
-        min-width: 600px; /* Force table to be wider than screen to enable scroll */
+        min-width: 600px;
+        /* Force table to be wider than screen to enable scroll */
     }
 
     /* Chips */
@@ -2541,7 +2560,9 @@ svg {
     width: 100%;
 }
 
-.filter-bar::-webkit-scrollbar { display: none; }
+.filter-bar::-webkit-scrollbar {
+    display: none;
+}
 
 /* Month < label > pills */
 .month-switcher {
@@ -2559,10 +2580,10 @@ svg {
 
 .month-switcher:hover {
     border-color: var(--accent-light);
-    box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.1);
 }
 
-.month-switcher .btn-icon, 
+.month-switcher .btn-icon,
 .month-switcher .month-label-btn {
     background: transparent !important;
     border: none !important;
@@ -2593,8 +2614,9 @@ svg {
     justify-content: center;
     flex-shrink: 0;
 }
+
 .btn-icon:hover {
-    background: rgba(124,58,237,0.15);
+    background: rgba(124, 58, 237, 0.15);
     color: var(--accent-light);
 }
 
@@ -2630,12 +2652,13 @@ svg {
 /* ======================== NET BALANCE INLINE PILL ======================== */
 .net-balance-inline {
     flex-shrink: 0;
-    margin-left: auto;          /* push to far right */
+    margin-left: auto;
+    /* push to far right */
     display: flex;
     align-items: center;
     gap: 8px;
-    background: linear-gradient(135deg, rgba(52,211,153,0.12), rgba(124,58,237,0.12));
-    border: 1px solid rgba(52,211,153,0.3);
+    background: linear-gradient(135deg, rgba(52, 211, 153, 0.12), rgba(124, 58, 237, 0.12));
+    border: 1px solid rgba(52, 211, 153, 0.3);
     border-radius: 24px;
     padding: 7px 14px 7px 12px;
     white-space: nowrap;
@@ -2670,7 +2693,7 @@ svg {
 .net-balance-unlock-btn {
     background: none;
     border: none;
-    color: rgba(52,211,153,0.6);
+    color: rgba(52, 211, 153, 0.6);
     cursor: pointer;
     padding: 2px 4px;
     font-size: 0.9rem;
@@ -2678,6 +2701,7 @@ svg {
     align-items: center;
     transition: color 0.2s, transform 0.2s;
 }
+
 .net-balance-unlock-btn:hover {
     color: #34d399;
     transform: scale(1.2);
@@ -2685,8 +2709,16 @@ svg {
 
 /* ======================== RESPONSIVE ======================== */
 @media (max-width: 480px) {
-    .month-label { min-width: 90px; font-size: 0.82rem; }
-    .net-balance-inline-label i { display: none; } /* hide icon on tiny screens */
+    .month-label {
+        min-width: 90px;
+        font-size: 0.82rem;
+    }
+
+    .net-balance-inline-label i {
+        display: none;
+    }
+
+    /* hide icon on tiny screens */
 }
 
 /* ======================== UTILITY CLASSES ======================== */
@@ -2808,6 +2840,3 @@ svg {
     letter-spacing: 3px;
     font-family: var(--font);
 }
-
-
-
