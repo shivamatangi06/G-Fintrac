@@ -5,9 +5,9 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <meta name="description"
-        content="G-Fintrac — Premium Personal Finance Tracker. Track income, expenses, savings and gain financial insights.">
+        content="MoneyFlow — Premium Personal Finance Tracker. Track income, expenses, savings, and gain financial insights.">
     <meta name="theme-color" content="#7c3aed">
-    <title>G-Fintrac</title>
+    <title>MoneyFlow — Personal Finance Tracker</title>
 
     <!-- Google Fonts -->
     <link rel="preconnect" href="https://fonts.googleapis.com">
@@ -21,62 +21,68 @@
     <!-- Chart.js -->
     <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 
-    <!-- SheetJS for Excel parsing -->
+    <!-- SheetJS for CSV/Excel parsing -->
     <script src="https://cdn.jsdelivr.net/npm/xlsx@0.18.5/dist/xlsx.full.min.js"></script>
 
     <!-- jsPDF for PDF export -->
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.1/jspdf.plugin.autotable.min.js"></script>
 
+    <!-- EmailJS SDK for Real Email OTP Delivery -->
+    <script src="https://cdn.jsdelivr.net/npm/@emailjs/browser@3/dist/email.min.js"></script>
+
     <!-- App Styles -->
     <link rel="stylesheet" href="styles.css">
-
-    <!-- PWA Manifest -->
-    <link rel="manifest" href="manifest.json">
-    <link rel="apple-touch-icon" href="expense.png">
-    <meta name="apple-mobile-web-app-capable" content="yes">
-    <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
 </head>
 
 <body>
 
-    <!-- ======================== PIN LOCK SCREEN ======================== -->
-    <div class="pin-lock-screen" id="pinLockScreen">
-        <div class="pin-lock-card">
+    <!-- ======================== EMAIL OTP LOGIN SCREEN ======================== -->
+    <div class="pin-lock-screen" id="otpLoginScreen">
+        <div class="pin-lock-card otp-card">
             <div class="pin-lock-header">
                 <div class="pin-lock-icon">
                     <img src="expense.png" alt="Logo" class="brand-logo-img">
                 </div>
-                <h2>G-Fintrac</h2>
+                <h2>MoneyFlow</h2>
             </div>
-            <p class="pin-lock-subtitle">Enter your 4-digit PIN to continue</p>
-            <div class="pin-dots" id="pinDots">
-                <span class="pin-dot"></span>
-                <span class="pin-dot"></span>
-                <span class="pin-dot"></span>
-                <span class="pin-dot"></span>
+
+            <!-- STEP 1: EMAIL STEP -->
+            <div id="otpEmailStep">
+                <p class="pin-lock-subtitle">Enter your email address to receive a 6-digit login OTP</p>
+                <div class="form-group text-left">
+                    <label for="otpEmailInput">Email Address</label>
+                    <input type="email" id="otpEmailInput" class="input input-styled" placeholder="e.g. user@example.com" autocomplete="email" required>
+                </div>
+                <button class="btn btn-primary btn-full-width" id="sendOtpBtn">
+                    <i class="fas fa-paper-plane"></i> Send OTP
+                </button>
             </div>
-            <p class="pin-error" id="pinError"></p>
-            <div class="pin-keypad" id="pinKeypad">
-                <button class="pin-key" data-key="1">1</button>
-                <button class="pin-key" data-key="2">2</button>
-                <button class="pin-key" data-key="3">3</button>
-                <button class="pin-key" data-key="4">4</button>
-                <button class="pin-key" data-key="5">5</button>
-                <button class="pin-key" data-key="6">6</button>
-                <button class="pin-key" data-key="7">7</button>
-                <button class="pin-key" data-key="8">8</button>
-                <button class="pin-key" data-key="9">9</button>
-                <button class="pin-key pin-key-empty"></button>
-                <button class="pin-key" data-key="0">0</button>
-                <button class="pin-key pin-key-delete" data-key="delete"><i class="fas fa-backspace"></i></button>
+
+            <!-- STEP 2: OTP CODE STEP -->
+            <div id="otpCodeStep" class="hidden-element">
+                <p class="pin-lock-subtitle">Enter the 6-digit OTP sent to <strong id="otpSentEmail"></strong></p>
+                <div class="otp-boxes-container" id="otpInputsContainer">
+                    <input type="text" maxlength="1" class="otp-input-box" data-index="0" inputmode="numeric" pattern="[0-9]*" autocomplete="one-time-code">
+                    <input type="text" maxlength="1" class="otp-input-box" data-index="1" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" maxlength="1" class="otp-input-box" data-index="2" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" maxlength="1" class="otp-input-box" data-index="3" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" maxlength="1" class="otp-input-box" data-index="4" inputmode="numeric" pattern="[0-9]*">
+                    <input type="text" maxlength="1" class="otp-input-box" data-index="5" inputmode="numeric" pattern="[0-9]*">
+                </div>
+                <p class="pin-error" id="otpError"></p>
+                <button class="btn btn-primary btn-full-width" id="verifyOtpBtn">
+                    <i class="fas fa-check-circle"></i> Verify & Login
+                </button>
+                <div class="otp-actions-footer">
+                    <button class="link-btn" id="resendOtpBtn" disabled>Resend OTP (<span id="resendTimer">60</span>s)</button>
+                    <span class="divider">•</span>
+                    <button class="link-btn" id="changeEmailBtn">Change Email</button>
+                </div>
             </div>
-            <div class="pin-setup-section" id="pinSetupSection" style="display:none;">
-                <p class="pin-setup-msg" id="pinSetupMsg">Create a new 4-digit PIN</p>
-            </div>
+
         </div>
     </div>
-
 
     <!-- ======================== SIDEBAR ======================== -->
     <aside class="sidebar" id="sidebar">
@@ -85,7 +91,7 @@
                 <div class="brand-icon">
                     <img src="expense.png" alt="Logo" class="brand-logo-img">
                 </div>
-                <span class="brand-name">G-Fintrac</span>
+                <span class="brand-name">MoneyFlow</span>
             </div>
             <button class="sidebar-toggle hamburger" id="sidebarToggleBtn" title="Toggle Sidebar">
                 <span></span><span></span><span></span>
@@ -112,9 +118,9 @@
                 <i class="fas fa-database"></i>
                 <span>Local Storage</span>
             </div>
-            <div class="sidebar-footer-text" style="margin-top: 6px;">
+            <div class="sidebar-footer-text mt-1">
                 <i class="fas fa-code"></i>
-                <span>v2.0.0</span>
+                <span>v2.3.0</span>
             </div>
         </div>
     </aside>
@@ -133,11 +139,9 @@
             <div class="brand-icon">
                 <img src="expense.png" alt="Logo" class="brand-logo-img">
             </div>
-            <span>G-Fintrac</span>
+            <span>MoneyFlow</span>
         </div>
     </header>
-
-
 
     <!-- ======================== MOBILE BOTTOM NAV ======================== -->
     <nav class="bottom-nav" id="bottomNav">
@@ -164,18 +168,16 @@
                 <h1><i class="fas fa-chart-pie"></i> Dashboard</h1>
             </header>
 
-
             <!-- Month Switcher -->
             <div class="filter-bar">
                 <div class="filter-left">
                     <div class="month-switcher">
-                        <button class="btn-icon" id="dashPrevMonth"><i class="fas fa-chevron-left"></i></button>
+                        <button class="btn-icon" id="dashPrevMonth" title="Previous Month"><i class="fas fa-chevron-left"></i></button>
                         <button class="btn-all-months month-label-btn" id="dashMonthLabel">March 2026</button>
-                        <button class="btn-icon" id="dashNextMonth"><i class="fas fa-chevron-right"></i></button>
+                        <button class="btn-icon" id="dashNextMonth" title="Next Month"><i class="fas fa-chevron-right"></i></button>
                     </div>
                     <button class="btn-all-months" id="dashAllMonths">All Months</button>
                 </div>
-
 
                 <div class="filter-actions-right">
                     <div class="btn-all-months net-balance-btn" id="netBalanceCard">
@@ -186,9 +188,6 @@
                         </button>
                     </div>
                 </div>
-
-
-
             </div>
 
             <!-- Summary Cards -->
@@ -204,7 +203,6 @@
                     <div class="card-icon"><img src="expense.png" alt="Expense" class="expense-icon-img"></div>
                     <div class="card-info">
                         <span class="card-label">Expenses</span>
-
                         <span class="card-value" id="totalExpenses">₹0</span>
                     </div>
                 </div>
@@ -247,7 +245,6 @@
                             <span class="progress-sub">Achieved</span>
                         </div>
                     </div>
-
                 </div>
                 <div class="card goal-card">
                     <div class="goal-header">
@@ -304,21 +301,17 @@
                 </div>
             </header>
 
-
             <!-- Month Switcher -->
             <div class="filter-bar">
                 <div class="filter-left">
                     <div class="month-switcher">
-                        <button class="btn-icon" id="insightPrevMonth"><i class="fas fa-chevron-left"></i></button>
+                        <button class="btn-icon" id="insightPrevMonth" title="Previous Month"><i class="fas fa-chevron-left"></i></button>
                         <button class="btn-all-months month-label-btn" id="insightMonthLabel">March 2026</button>
-                        <button class="btn-icon" id="insightNextMonth"><i class="fas fa-chevron-right"></i></button>
+                        <button class="btn-icon" id="insightNextMonth" title="Next Month"><i class="fas fa-chevron-right"></i></button>
                     </div>
                     <button class="btn-all-months" id="insightAllMonths">All Months</button>
                 </div>
-                <div class="filter-actions-right">
-                </div>
             </div>
-
 
             <!-- Month Summary Cards -->
             <div class="insights-summary">
@@ -357,7 +350,7 @@
             <div class="card category-analytics-card" id="categoryAnalytics">
                 <h3><i class="fas fa-layer-group"></i> Category Breakdown</h3>
                 <div class="category-bars" id="categoryBars">
-                    <!-- Populated by JS -->
+                    <!-- Populated dynamically by app.js -->
                 </div>
             </div>
 
@@ -391,36 +384,15 @@
                     <div class="form-group">
                         <label>Category</label>
                         <div class="chip-group chip-group-wrap" id="txnCategoryChips">
-                            <!-- Income -->
+                            <!-- Income default chips -->
                             <button type="button" class="chip active" data-value="Salary">Salary</button>
                             <button type="button" class="chip" data-value="Bonus">Bonus</button>
                             <button type="button" class="chip" data-value="custom">Custom...</button>
-
-                            <!-- Expenses -->
-                            <button type="button" class="chip" data-value="Housing">Housing</button>
-                            <button type="button" class="chip" data-value="Fuel">Fuel</button>
-                            <button type="button" class="chip" data-value="Food & Drinks">Food & Drinks</button>
-                            <button type="button" class="chip" data-value="Credit Card">Credit Card</button>
-                            <button type="button" class="chip" data-value="Travel">Travel</button>
-                            <button type="button" class="chip" data-value="Utilities">Utilities</button>
-                            <button type="button" class="chip" data-value="Insurance">Insurance</button>
-                            <button type="button" class="chip" data-value="Healthcare">Healthcare</button>
-                            <button type="button" class="chip" data-value="Education">Education</button>
-                            <button type="button" class="chip" data-value="Entertainment">Entertainment</button>
-
-                            <!-- Savings & Investments -->
-                            <button type="button" class="chip" data-value="Savings Account">Savings Account</button>
-                            <button type="button" class="chip" data-value="Post Office Account">Post Office
-                                Account</button>
-                            <button type="button" class="chip" data-value="Chits">Chits</button>
-                            <button type="button" class="chip" data-value="Fixed Deposits">Fixed Deposits</button>
-                            <button type="button" class="chip" data-value="Gold Savings">Gold Savings</button>
-                            <button type="button" class="chip" data-value="Mutual Funds">Mutual Funds</button>
                         </div>
                     </div>
-                    <div class="form-group" id="customCategoryGroup" style="display:none;">
+                    <div class="form-group hidden-element" id="customCategoryGroup">
                         <label for="txnCustomCategory">Custom Category</label>
-                        <input type="text" id="txnCustomCategory" placeholder="Enter category">
+                        <input type="text" id="txnCustomCategory" placeholder="Enter custom category name">
                     </div>
                     <div class="form-group">
                         <label for="txnNotes">Notes</label>
@@ -460,15 +432,15 @@
             <!-- Bank Statement Upload -->
             <div class="card upload-card">
                 <h3><i class="fas fa-cloud-upload-alt"></i> Upload Bank Statement</h3>
-                <p class="upload-description">Upload a CSV or Excel file. We'll auto-detect and categorize transactions.
+                <p class="upload-description">Upload a CSV or Excel statement file to auto-detect and import transactions.
                 </p>
                 <div class="upload-area" id="uploadArea">
                     <i class="fas fa-cloud-upload-alt"></i>
-                    <p>Drag & drop your file here, or <label for="fileInput" class="upload-link">browse</label></p>
+                    <p>Drag & drop your statement file here, or <label for="fileInput" class="upload-link">browse</label></p>
                     <input type="file" id="fileInput" accept=".csv,.xlsx,.xls" hidden>
                     <span class="upload-hint">Supports CSV, XLS, XLSX</span>
                 </div>
-                <div class="upload-preview" id="uploadPreview" style="display:none;">
+                <div class="upload-preview hidden-element" id="uploadPreview">
                     <h4>Parsed Transactions <span id="parsedCount"></span></h4>
                     <div class="table-responsive">
                         <table class="txn-table" id="parsedTable">
@@ -500,7 +472,7 @@
         <section class="tab-content" id="tab-settings">
             <header class="tab-header">
                 <h1><i class="fas fa-sliders-h"></i> Settings</h1>
-                <p class="tab-subtitle">Customize your experience</p>
+                <p class="tab-subtitle">Customize your application preferences</p>
             </header>
 
             <div class="settings-grid">
@@ -521,6 +493,38 @@
                     </div>
                 </div>
 
+                <!-- Account & Session -->
+                <div class="card settings-card">
+                    <div class="settings-item">
+                        <div class="settings-info">
+                            <i class="fas fa-user-circle"></i>
+                            <div>
+                                <h4>Account Profile</h4>
+                                <p>Signed in as <strong id="accountEmail">user@example.com</strong></p>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" id="logoutBtn">
+                            <i class="fas fa-sign-out-alt"></i> Logout
+                        </button>
+                    </div>
+                </div>
+
+                <!-- EmailJS API Settings -->
+                <div class="card settings-card">
+                    <div class="settings-item">
+                        <div class="settings-info">
+                            <i class="fas fa-envelope-open-text"></i>
+                            <div>
+                                <h4>Email Notification Setup</h4>
+                                <p>Configure EmailJS to send real OTP emails directly to your inbox</p>
+                            </div>
+                        </div>
+                        <button class="btn btn-secondary btn-sm" id="configEmailJsBtn">
+                            <i class="fas fa-cog"></i> EmailJS Setup
+                        </button>
+                    </div>
+                </div>
+
                 <!-- Export -->
                 <div class="card settings-card">
                     <div class="settings-item">
@@ -528,7 +532,7 @@
                             <i class="fas fa-download"></i>
                             <div>
                                 <h4>Export Data</h4>
-                                <p>Download your transactions</p>
+                                <p>Download your transactions in CSV or PDF format</p>
                             </div>
                         </div>
                         <div class="settings-actions">
@@ -542,16 +546,14 @@
                     </div>
                 </div>
 
-
-
                 <!-- Clear Data -->
                 <div class="card settings-card">
                     <div class="settings-item">
                         <div class="settings-info">
                             <i class="fas fa-trash-alt"></i>
                             <div>
-                                <h4>Clear All Data</h4>
-                                <p>Permanently delete all transactions and settings</p>
+                                <h4>Clear Data</h4>
+                                <p>Delete specific month records or wipe all data</p>
                             </div>
                         </div>
                         <button class="btn btn-danger btn-sm" id="clearDataBtn">
@@ -570,6 +572,33 @@
 
     <!-- ======================== MODALS ======================== -->
 
+    <!-- EmailJS Settings Modal -->
+    <div class="modal-overlay" id="emailJsModal">
+        <div class="modal card">
+            <div class="modal-icon export">
+                <i class="fas fa-envelope-open-text"></i>
+            </div>
+            <h3>EmailJS Setup for Real Emails</h3>
+            <p>Connect your free <a href="https://www.emailjs.com/" target="_blank" class="upload-link">EmailJS.com</a> account to send real OTPs directly to any email inbox.</p>
+            <div class="form-group text-left">
+                <label for="emailJsServiceId">Service ID</label>
+                <input type="text" id="emailJsServiceId" class="input input-styled" placeholder="e.g. service_xxxx">
+            </div>
+            <div class="form-group text-left">
+                <label for="emailJsTemplateId">Template ID</label>
+                <input type="text" id="emailJsTemplateId" class="input input-styled" placeholder="e.g. template_xxxx">
+            </div>
+            <div class="form-group text-left">
+                <label for="emailJsPublicKey">Public Key (User ID)</label>
+                <input type="text" id="emailJsPublicKey" class="input input-styled" placeholder="e.g. user_xxxx or public_key">
+            </div>
+            <div class="modal-actions">
+                <button class="btn btn-primary" id="saveEmailJsBtn"><i class="fas fa-save"></i> Save Config</button>
+                <button class="btn btn-secondary" id="cancelEmailJsBtn">Cancel</button>
+            </div>
+        </div>
+    </div>
+
     <!-- Export Modal -->
     <div class="modal-overlay" id="exportModal">
         <div class="modal card">
@@ -578,9 +607,8 @@
             </div>
             <h3>Export Data</h3>
             <p>Enter month and year to export that period, or leave blank to export all data.</p>
-            <input type="text" id="exportMonthInput" class="input" autocomplete="off"
-                placeholder="e.g. May 2026  (leave blank for all data)"
-                style="font-family: var(--font); letter-spacing: 1px;">
+            <input type="text" id="exportMonthInput" class="input input-styled" autocomplete="off"
+                placeholder="e.g. May 2026 (leave blank for all data)">
             <div class="modal-actions">
                 <button class="btn btn-primary" id="confirmExportBtn"><i class="fas fa-download"></i> Export</button>
                 <button class="btn btn-secondary" id="cancelExportBtn">Cancel</button>
@@ -594,11 +622,10 @@
             <div class="modal-icon danger">
                 <i class="fas fa-exclamation-triangle"></i>
             </div>
-            <h3>Delete Month Data</h3>
-            <p>Enter the <strong>secret delete code</strong> for the month you want to erase.</p>
-            <input type="text" id="confirmMonthInput" class="input" autocomplete="off"
-                placeholder="Please enter Month to delete"
-                style="text-transform:uppercase; letter-spacing: 2px; font-family: var(--font);">
+            <h3>Delete Data</h3>
+            <p>Enter <strong>[MMM]DEL[YYYY]</strong> (e.g. MARDEL2026) to delete a month, or <strong>CLEARALLDATANOW</strong> to erase all records.</p>
+            <input type="text" id="confirmMonthInput" class="input input-styled uppercase-input" autocomplete="off"
+                placeholder="e.g. MARDEL2026 or CLEARALLDATANOW">
 
             <div class="modal-actions">
                 <button class="btn btn-danger" id="confirmClearBtn"><i class="fas fa-trash-alt"></i> Delete</button>
