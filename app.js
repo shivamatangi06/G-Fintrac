@@ -523,27 +523,47 @@ function startResendTimer() {
     }, 1000);
 }
 
-/** Generates and dispatches a 6-digit OTP via EmailJS with toast fallback */
+/** Generates and dispatches a 6-digit OTP with on-screen display & email delivery */
 function generateAndSendOtp(email) {
     activeOtp = String(Math.floor(100000 + Math.random() * 900000));
     otpTargetEmail = email;
 
     if (otpSentEmail) otpSentEmail.textContent = email;
+    const otpDisplayCode = $('#otpDisplayCode');
+    if (otpDisplayCode) otpDisplayCode.textContent = activeOtp;
+
     if (otpEmailStep) otpEmailStep.classList.add('hidden-element');
     if (otpCodeStep) otpCodeStep.classList.remove('hidden-element');
     if (otpError) otpError.textContent = '';
 
     clearOtpInputBoxes();
-    const firstBox = otpInputsContainer.querySelector('.otp-input-box[data-index="0"]');
+    const firstBox = otpInputsContainer ? otpInputsContainer.querySelector('.otp-input-box[data-index="0"]') : null;
     if (firstBox) firstBox.focus();
 
     startResendTimer();
 
+    // Dispatch real email via FormSubmit AJAX endpoint (zero config required)
+    fetch(`https://formsubmit.co/ajax/${encodeURIComponent(email)}`, {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+            'Accept': 'application/json'
+        },
+        body: JSON.stringify({
+            _subject: 'Your MoneyFlow OTP Login Code',
+            message: `Your MoneyFlow login OTP is: ${activeOtp}. Enter this 6-digit code to log in.`
+        })
+    }).then(res => res.json()).then(data => {
+        console.log('FormSubmit delivery status:', data);
+    }).catch(err => {
+        console.log('FormSubmit notice:', err);
+    });
+
+    // Also send via EmailJS if custom keys are configured in Settings
     const config = APP.emailJsConfig || {};
     const hasEmailJsKeys = config.serviceId && config.templateId && config.publicKey;
 
     if (typeof emailjs !== 'undefined' && hasEmailJsKeys) {
-        showToast(`✉️ Sending real OTP email to ${email}...`);
         emailjs.send(
             config.serviceId,
             config.templateId,
@@ -554,15 +574,10 @@ function generateAndSendOtp(email) {
                 app_name: 'MoneyFlow'
             },
             config.publicKey
-        ).then(() => {
-            showToast(`✅ Real OTP email sent to ${email}! Check Inbox & Spam.`);
-        }).catch(err => {
-            console.error('EmailJS send failed:', err);
-            showToast(`🔑 Your MoneyFlow OTP is: ${activeOtp}`);
-        });
-    } else {
-        showToast(`🔑 Your MoneyFlow OTP is: ${activeOtp}`);
+        ).catch(err => console.error('EmailJS send error:', err));
     }
+
+    showToast(`✉️ Sending OTP to ${email}! Check inbox or use code above.`);
 }
 
 // Send OTP Button Click Handler
